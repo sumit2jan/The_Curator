@@ -1,55 +1,76 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
 
 const userVerificationSchema = new mongoose.Schema(
   {
+    username: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
     email: {
       type: String,
       required: true,
-      unique: true,
-      trim: true,
       lowercase: true,
+      trim: true,
+      unique: true, // ✅ important
       match: [
         /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
         "Please use a valid email address",
       ],
     },
+
+    password: {
+      type: String,
+      required: true,
+      minlength: 6,
+    },
+
     otp: {
       code: {
         type: String,
         required: true,
       },
+
       type: {
         type: String,
-        enum: ["email_verification", "password_reset", "account_deletion",'subscription_confirm'],
-        required: true,
+        enum: [
+          "email_verification",
+          "password_reset",
+          "account_deletion",
+          "subscription_confirm",
+        ],
+        default: "email_verification",
       },
+
       expiresAt: {
         type: Date,
         required: true,
-        index: true,
       },
+
       attempts: {
         type: Number,
         default: 0,
         max: 5,
       },
     },
+
+    createdAt: {
+      type: Date,
+      default: Date.now,
+      expires: 300, // ⏱ auto delete after 5 min
+    },
   },
   { timestamps: true }
 );
 
-userVerificationSchema.index({ "otp.expiresAt": 1 }, { expireAfterSeconds: 0 });
+// TTL based on expiresAt (extra safety)
+userVerificationSchema.index(
+  { "otp.expiresAt": 1 },
+  { expireAfterSeconds: 0 }
+);
 
-userVerificationSchema.pre("save", async function () {
-  if (this.isModified("otp.code") && this.otp?.code) {
-    const salt = await bcrypt.genSalt(10);
-    this.otp.code = await bcrypt.hash(this.otp.code, salt);
-  }
-});
-
-userVerificationSchema.methods.compareOTP = async function (inputCode) {
-  if (!this.otp?.code) return false;
-  return await bcrypt.compare(inputCode, this.otp.code);
-};
-module.exports = mongoose.model("UserVerification", userVerificationSchema);
+module.exports = mongoose.model(
+  "UserVerification",
+  userVerificationSchema
+);
