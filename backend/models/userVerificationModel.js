@@ -2,18 +2,35 @@ const mongoose = require("mongoose");
 
 const userVerificationSchema = new mongoose.Schema(
   {
+    // Existing user flows (login / forgot / reverification)
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: function () {
+        return (
+          this.otp &&
+          (this.otp.type === "reverification" ||
+            this.otp.type === "password_reset")
+        );
+      },
+    },
+
+    // Signup flow only
     username: {
       type: String,
-      required: true,
       trim: true,
+      required: function () {
+        return this.otp && this.otp.type === "email_verification";
+      },
     },
 
     email: {
       type: String,
-      required: true,
       lowercase: true,
       trim: true,
-      unique: true, // ✅ important
+      required: function () {
+        return this.otp && this.otp.type === "email_verification";
+      },
       match: [
         /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
         "Please use a valid email address",
@@ -22,8 +39,10 @@ const userVerificationSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: true,
       minlength: 6,
+      required: function () {
+        return this.otp && this.otp.type === "email_verification";
+      },
     },
 
     otp: {
@@ -39,6 +58,7 @@ const userVerificationSchema = new mongoose.Schema(
           "password_reset",
           "account_deletion",
           "subscription_confirm",
+          "reverification",
         ],
         default: "email_verification",
       },
@@ -58,19 +78,20 @@ const userVerificationSchema = new mongoose.Schema(
     createdAt: {
       type: Date,
       default: Date.now,
-      expires: 300, // ⏱ auto delete after 5 min
+      expires: 300, // auto delete after 5 min
     },
   },
   { timestamps: true }
 );
 
-// TTL based on expiresAt (extra safety)
+// Indexes (performance boost)
+userVerificationSchema.index({ userId: 1 });
+userVerificationSchema.index({ "otp.type": 1 });
+
+// TTL index (extra safety)
 userVerificationSchema.index(
   { "otp.expiresAt": 1 },
   { expireAfterSeconds: 0 }
 );
 
-module.exports = mongoose.model(
-  "UserVerification",
-  userVerificationSchema
-);
+module.exports = mongoose.model("UserVerification", userVerificationSchema);
