@@ -7,9 +7,14 @@ const api = axios.create({
   }
 });
 
+// Signup Routes
 export const sendSignupOTP = (data) => api.post("/auth/signup/send-otp", data); // 1 sign up step.
 export const verifySignupOTP = (data) => api.post("/auth/signup/verify-create", data); // 2 step of sign  verify the otp and create the user.
 export const resendSignupOTP = (data) => api.post("/auth/signup/Resend-otp", data);// 3 step resend the sign up otp
+
+// Login Routes
+export const verifyOTP = (data) => api.post("/auth/verifyUser", data);// otp verify krne ke lie 
+export const resendVerifyOTP = (data) => api.post("/auth/resendVerifyOTP", data); // otp resnd krne ke lie 
 
 // yha se headers mai token bhej rahe hai jo sbb log access kre hai
 api.interceptors.request.use((config) => {

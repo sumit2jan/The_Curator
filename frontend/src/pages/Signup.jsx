@@ -203,7 +203,6 @@ const Signup = () => {
       {/* Background Image */}
       <img
         src={SignUpImage}
-        alt="bg"
         className="absolute inset-0 w-full h-full object-cover"
       />
 

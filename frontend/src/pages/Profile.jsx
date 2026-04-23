@@ -41,7 +41,7 @@ const Profile = () => {
             {/* 🔥 HERO */}
             <div className="relative h-[300px] w-full overflow-hidden">
                 <img
-                    src="/images/forest.jpg"
+                    src="https://images.unsplash.com/photo-1715685434930-20b40a6f47bf?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fGNvdmVyJTIwcGhvdG98ZW58MHx8MHx8fDA%3D"
                     alt="cover"
                     className="w-full h-full object-cover opacity-30"
                 />
