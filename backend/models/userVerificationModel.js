@@ -86,9 +86,10 @@ const userVerificationSchema = new mongoose.Schema(
 
 // Indexes (performance boost)
 userVerificationSchema.index({ userId: 1 });
+userVerificationSchema.index({ email: 1 });
 userVerificationSchema.index({ "otp.type": 1 });
 
-// TTL index (extra safety)
+// TTL index (extra safety) 
 userVerificationSchema.index(
   { "otp.expiresAt": 1 },
   { expireAfterSeconds: 0 }

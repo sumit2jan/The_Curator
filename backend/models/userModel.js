@@ -32,11 +32,6 @@ const UserSchema = new mongoose.Schema(
       select: false
     },
 
-    profilePic: {
-      type: String,
-      default: null,
-    },
-
     isVerified: {
       type: Boolean,
       default: false, // ✅ after OTP verification user create ho raha hai

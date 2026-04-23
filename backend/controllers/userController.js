@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const UserDetail = require("../models/userDetail");
 const User = require("../models/userModel");
 
@@ -437,5 +438,101 @@ const toggleVerify = async (req, res) => {
     }
 };
 
+//profile 
+const getUserProfile = async (req, res) => {
+    try {
+        const paramId = req.params.id; // 👈 optional
+        const loggedInId = req.user._id.toString();
 
-module.exports = { getAllUsers, updateUser, deleteUser, toggleVerify };
+        // Decide which ID to use
+        let targetUserId;
+
+        if (paramId) {
+            // Authorization check
+            if (req.user.role !== "admin" && paramId !== loggedInId) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Unauthorized",
+                    data: null
+                });
+            }
+
+            targetUserId = paramId;
+        } else {
+            // If no param → own profile
+            targetUserId = loggedInId;
+        }
+
+        const userId = new mongoose.Types.ObjectId(targetUserId);
+
+        const result = await User.aggregate([
+            {
+                $match: { _id: userId }
+            },
+            {
+                $lookup: {
+                    from: "userdetails",
+                    localField: "_id",
+                    foreignField: "userId",
+                    as: "details"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$details",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    password: 0,
+                    __v: 0,
+                    "details.__v": 0,
+                    "details.userId": 0
+                }
+            },
+            {
+                $addFields: {
+                    firstName: "$details.firstName",
+                    lastName: "$details.lastName",
+                    gender: "$details.gender",
+                    country: "$details.country",
+                    bio: "$details.bio",
+                    dob: "$details.dob",
+                    profilePic: "$details.profilePic",
+                    detailId: "$details._id"
+                }
+            },
+            {
+                $project: {
+                    details: 0
+                }
+            }
+        ]);
+
+        if (!result.length) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+                data: null
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Profile fetched successfully",
+            data: result[0]
+        });
+
+    } catch (error) {
+        console.log("Get Profile Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+            data: null
+        });
+    }
+};
+
+module.exports = { getAllUsers, updateUser, deleteUser, toggleVerify, getUserProfile };

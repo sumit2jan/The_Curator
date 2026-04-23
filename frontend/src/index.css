@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  /* 🔥 BASE */
+  --color-primary: #000000;
+
+  /* 🔥 SURFACES (cards, sections) */
+  --color-surface: #111111;
+  --color-soft: #1a1a1a;
+
+  /* 🔥 TEXT */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+
+  /* 🔥 ACCENT (use rarely) */
+  --color-accent: #00d4ff;
+}
+
+@keyframes scrollUp {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes scrollDown {
+  0% {
+    transform: translateY(-50%);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-scrollUp {
+  animation: scrollUp 10s linear infinite;
+}
+
+.animate-scrollDown {
+  animation: scrollDown 10s linear infinite;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-primary);
+  color: var(--color-text-primary);
+  font-family: 'Inter', sans-serif;
+}
+
+.Toastify__toast {
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}

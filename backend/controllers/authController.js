@@ -7,11 +7,135 @@ const { hashData, compareData } = require("../utils/hash");
 const { generateToken } = require("../utils/jwt");
 
 // send otp to user 
+// const sendSignupOTP = async (req, res) => {
+//     try {
+//         const { username, email, password } = req.body;
+
+//         //  Validate input
+//         if (!username || !email || !password) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "All fields are required",
+//                 data: null,
+//                 error: null,
+//             });
+//         }
+
+
+//         // Check if username already exists
+//         const existingUsername =
+//             await User.findOne({ username }) ||
+//             await UserVerification.findOne({ username });
+
+//         if (existingUsername) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Username already taken",
+//                 data: null,
+//                 error: null,
+//             });
+//         }
+
+//         //Check if user already exists
+//         const existingUser = await User.findOne({ email });
+//         if (existingUser) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "User already exists",
+//                 data: null,
+//                 error: null,
+//             });
+//         }
+
+//         // Check existing verification record
+//         const existingVerification = await UserVerification.findOne({ email });
+
+//         // Too many attempts lock
+//         if (existingVerification && existingVerification.otp.attempts >= 5) {
+//             return res.status(403).json({
+//                 success: false,
+//                 message: "Too many failed attempts. Try again later.",
+//                 data: null,
+//                 error: null,
+//             });
+//         }
+
+//         // Cooldown (60 sec)
+//         if (
+//             existingVerification &&
+//             existingVerification.otp.type === "email_verification" &&
+//             Date.now() - new Date(existingVerification.updatedAt).getTime() < 60 * 1000
+//         ) {
+//             return res.status(429).json({
+//                 success: false,
+//                 message: "Please wait 60 sec before requesting another OTP",
+//                 data: null,
+//                 error: null,
+//             });
+//         }
+
+//         // Generate OTP
+//         const otp = generateOTP();
+//         const hashedOtp = await hashData(otp);
+//         const hashedPassword = await hashData(password);
+
+//         const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+
+//         // Send email FIRST
+//         const isEmailSent = await sendOTPEmail(email, otp);
+
+//         if (!isEmailSent) {
+//             return res.status(500).json({
+//                 success: false,
+//                 message: "Failed to send OTP email",
+//                 data: null,
+//                 error: null,
+//             });
+//         }
+
+//         //Save / Update verification record
+//         await UserVerification.findOneAndUpdate(
+//             { email },
+//             {
+//                 username,
+//                 email,
+//                 password: hashedPassword,
+//                 otp: {
+//                     code: hashedOtp,
+//                     type: "email_verification",
+//                     expiresAt,
+//                     attempts: 0,
+//                 }
+//             },
+//             {
+//                 upsert: true,
+//                 new: true,
+//             }
+//         );
+
+//         // SUCCESS
+//         return res.status(200).json({
+//             success: true,
+//             message: "OTP sent successfully",
+//             data: null,
+//             error: null,
+//         });
+
+//     } catch (error) {
+//         return res.status(500).json({
+//             success: false,
+//             message: "Something went wrong",
+//             data: null,
+//             error: error.message,
+//         });
+//     }
+// };
+
 const sendSignupOTP = async (req, res) => {
     try {
         const { username, email, password } = req.body;
 
-        //  Validate input
+        // Validate input
         if (!username || !email || !password) {
             return res.status(400).json({
                 success: false,
@@ -21,12 +145,8 @@ const sendSignupOTP = async (req, res) => {
             });
         }
 
-
-        // Check if username already exists
-        const existingUsername =
-            await User.findOne({ username }) ||
-            await UserVerification.findOne({ username });
-
+        // Check if username already exists ONLY in the main User collection
+        const existingUsername = await User.findOne({ username });
         if (existingUsername) {
             return res.status(400).json({
                 success: false,
@@ -36,7 +156,7 @@ const sendSignupOTP = async (req, res) => {
             });
         }
 
-        //Check if user already exists
+        // Check if user already exists in the main User collection
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({
@@ -79,7 +199,7 @@ const sendSignupOTP = async (req, res) => {
         const hashedOtp = await hashData(otp);
         const hashedPassword = await hashData(password);
 
-        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
         // Send email FIRST
         const isEmailSent = await sendOTPEmail(email, otp);
@@ -93,7 +213,7 @@ const sendSignupOTP = async (req, res) => {
             });
         }
 
-        //Save / Update verification record
+        // Save / Update verification record
         await UserVerification.findOneAndUpdate(
             { email },
             {
@@ -117,6 +237,118 @@ const sendSignupOTP = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "OTP sent successfully",
+            data: null,
+            error: null,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Something went wrong",
+            data: null,
+            error: error.message,
+        });
+    }
+};
+
+// Resend otp to user
+const resendSignupOTP = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        //Validate input
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is required",
+                data: null,
+                error: null,
+            });
+        }
+
+        //Check verification record exists
+        const existingVerification = await UserVerification.findOne({ email });
+
+        if (!existingVerification) {
+            return res.status(404).json({
+                success: false,
+                message: "No verification request found. Please signup again.",
+                data: null,
+                error: null,
+            });
+        }
+
+        //Check if already registered
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: "User already exists",
+                data: null,
+                error: null,
+            });
+        }
+
+        //Too many attempts lock
+        if (existingVerification.otp.attempts >= 5) {
+            return res.status(403).json({
+                success: false,
+                message: "Too many failed attempts. Try again later.",
+                data: null,
+                error: null,
+            });
+        }
+
+        //Cooldown check (60 sec)
+        if (
+            existingVerification.otp.type === "email_verification" &&
+            Date.now() - new Date(existingVerification.updatedAt).getTime() < 60 * 1000
+        ) {
+            return res.status(429).json({
+                success: false,
+                message: "Please wait 60 sec before requesting another OTP",
+                data: null,
+                error: null,
+            });
+        }
+
+        //Generate new OTP
+        const otp = generateOTP();
+        const hashedOtp = await hashData(otp);
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+        // Send email FIRST
+        const isEmailSent = await sendOTPEmail(email, otp);
+
+        if (!isEmailSent) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to send OTP email",
+                data: null,
+                error: null,
+            });
+        }
+
+        // Update ONLY OTP (important)
+        await UserVerification.findOneAndUpdate(
+            { email },
+            {
+                otp: {
+                    code: hashedOtp,
+                    type: "email_verification",
+                    expiresAt,
+                    attempts: existingVerification.otp.attempts, // don't reset blindly
+                }
+            },
+            {
+                new: true,
+            }
+        );
+
+        //SUCCESS
+        return res.status(200).json({
+            success: true,
+            message: "OTP resent successfully",
             data: null,
             error: null,
         });
@@ -205,16 +437,34 @@ const verifyOTPAndRegister = async (req, res) => {
         }
 
         // checking email is already exists in signup or not
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({
+            $or: [
+                { email: verification.email },
+                { username: verification.username }
+            ]
+        });
 
         if (existingUser) {
-            return res.status(400).json({
-                success: false,
-                message: "User already exists",
-                data: null,
-                error: null,
-            });
+            // Agar email match kiya
+            if (existingUser.email === verification.email) {
+                return res.status(400).json({
+                    success: false,
+                    message: "User already exists",
+                    data: null,
+                    error: null,
+                });
+            }
+            // Agar username kisi aur ne le liya OTP verify hone ki wait karte time
+            if (existingUser.username === verification.username) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Username was just taken by someone else. Please signup again with a new username.",
+                    data: null,
+                    error: null,
+                });
+            }
         }
+
         // Create user
         const user = await User.create({
             username: verification.username,
@@ -796,6 +1046,7 @@ const verifyOTP = async (req, res) => {
 
 module.exports = {
     sendSignupOTP,
+    resendSignupOTP,
     verifyOTPAndRegister,
     login,
     sendResetOTP,
