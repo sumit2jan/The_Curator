@@ -10,6 +10,7 @@ router.post("/signup/verify-create", authController.verifyOTPAndRegister);
 
 router.post("/login", authController.login);
 router.post("/verifyUser", authController.verifyOTP);
+router.post("/resendVerifyOTP", authController.resendVerifyOTP);
 
 router.post("/password/send-otp", authController.sendResetOTP);
 router.post("/password/reset", authController.resetPassword);

@@ -31,12 +31,12 @@ exports.sendMail = async ({ email, subject, content }) => {
             html: content
         });
 
-        console.log("📩 Mail sent:", info.messageId);
+        //console.log("Mail sent:", info.messageId);
 
         return true;
 
     } catch (error) {
-        console.error("❌ Mail error:", error);
+        //console.error(" Mail error:", error);
         throw new Error(error.message);
     }
 };

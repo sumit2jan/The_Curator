@@ -519,7 +519,6 @@ const verifyOTPAndRegister = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-
         //  Validate
         if (!email || !password) {
             return res.status(400).json({
@@ -535,6 +534,18 @@ const login = async (req, res) => {
 
         //  Check user exists
         if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid credentials",
+                data: null,
+                error: null,
+            });
+        }
+
+        // Compare password
+        const isMatch = await compareData(password, user.password);
+
+        if (!isMatch) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid credentials",
@@ -593,17 +604,7 @@ const login = async (req, res) => {
             });
         }
 
-        // Compare password
-        const isMatch = await compareData(password, user.password);
 
-        if (!isMatch) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid credentials",
-                data: null,
-                error: null,
-            });
-        }
 
         // Generate token
         const token = generateToken(user._id);
@@ -932,6 +933,7 @@ const changePassword = async (req, res) => {
     }
 };
 
+// for Unverified Users (During Login)
 const verifyOTP = async (req, res) => {
     try {
         const { email, otp } = req.body;
@@ -1043,6 +1045,126 @@ const verifyOTP = async (req, res) => {
     }
 };
 
+// Resend OTP for Unverified Users (During Login)
+const resendVerifyOTP = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is required",
+                data: null,
+                error: null,
+            });
+        }
+
+        // 1. Check if user exists in main DB
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found. Please signup first.",
+                data: null,
+                error: null,
+            });
+        }
+
+        // 2. Check if already verified (Faltu mein OTP kyu bhejna)
+        if (user.isVerified) {
+            return res.status(400).json({
+                success: false,
+                message: "Account is already verified. Please login.",
+                data: null,
+                error: null,
+            });
+        }
+
+        // 3. Check existing verification record
+        const existingVerification = await UserVerification.findOne({
+            userId: user._id,
+            "otp.type": "reverification"
+        });
+
+        // 4. Cooldown and Attempts check
+        let currentAttempts = 0;
+        
+        if (existingVerification) {
+            if (existingVerification.otp.attempts >= 5) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Too many failed attempts. Try again later.",
+                    data: null,
+                    error: null,
+                });
+            }
+
+            if (Date.now() - new Date(existingVerification.updatedAt).getTime() < 60 * 1000) {
+                return res.status(429).json({
+                    success: false,
+                    message: "Please wait 60 sec before requesting another OTP",
+                    data: null,
+                    error: null,
+                });
+            }
+            
+            currentAttempts = existingVerification.otp.attempts;
+        }
+
+        // 5. Generate new OTP
+        const otp = generateOTP();
+        const hashedOtp = await hashData(otp);
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+        // 6. Send email FIRST
+        const isEmailSent = await sendOTPEmail(email, otp);
+
+        if (!isEmailSent) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to send OTP email",
+                data: null,
+                error: null,
+            });
+        }
+
+        // 7. Upsert (Update or Create) Verification Record
+        await UserVerification.findOneAndUpdate(
+            { userId: user._id },
+            {
+                email: user.email,
+                userId: user._id,
+                otp: {
+                    code: hashedOtp,
+                    type: "reverification",
+                    expiresAt,
+                    attempts: currentAttempts, // Purane attempts maintain rakho
+                }
+            },
+            {
+                upsert: true,
+                new: true,
+            }
+        );
+
+        // SUCCESS
+        return res.status(200).json({
+            success: true,
+            message: "OTP resent successfully",
+            data: null,
+            error: null,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Something went wrong",
+            data: null,
+            error: error.message,
+        });
+    }
+};
+
 
 module.exports = {
     sendSignupOTP,
@@ -1052,5 +1174,6 @@ module.exports = {
     sendResetOTP,
     resetPassword,
     changePassword,
-    verifyOTP
+    verifyOTP,
+    resendVerifyOTP
 };
