@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 const UserDetail = require("../models/userDetail");
 const User = require("../models/userModel");
-
+const uploadMedia = require("../utils/uploadMedia");
+const cloudinary = require("../config/cloudinary");
 
 // DashBoard
 const getAllUsers = async (req, res) => {
@@ -500,6 +501,7 @@ const getUserProfile = async (req, res) => {
                     bio: "$details.bio",
                     dob: "$details.dob",
                     profilePic: "$details.profilePic",
+                    cover: "$details.cover",
                     detailId: "$details._id"
                 }
             },
@@ -535,4 +537,181 @@ const getUserProfile = async (req, res) => {
     }
 };
 
-module.exports = { getAllUsers, updateUser, deleteUser, toggleVerify, getUserProfile };
+// profile pic update krne ke liye 
+const uploadProfilePic = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const file = req.file;
+
+        // No file
+        if (!file) {
+            return res.status(400).json({
+                success: false,
+                message: "No file uploaded",
+            });
+        }
+
+        // Step 1: Get existing user
+        const userDetail = await UserDetail.findOne({ userId });
+
+        if (!userDetail) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        const oldPublicId = userDetail.profilePic?.public_id;
+
+        // Step 2: Upload new image
+        const uploaded = await uploadMedia([file], "profile");
+        const image = uploaded[0]; // { url, public_id }
+
+        // Step 3: Update DB (FIXED)
+        const updatedUser = await UserDetail.findOneAndUpdate(
+            { userId },
+            {
+                profilePic: {
+                    url: image.url,
+                    public_id: image.public_id,
+                },
+            },
+            { returnDocument: "after" } // ✅ new: true ka replacement
+        );
+
+        // Step 4: Delete old image (SAFE)
+        if (oldPublicId) {
+            try {
+                await cloudinary.uploader.destroy(oldPublicId);
+                console.log("Old image deleted:", oldPublicId);
+            } catch (err) {
+                console.log("Failed to delete old image:", err.message);
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Profile picture updated successfully",
+            data: updatedUser,
+        });
+
+    } catch (error) {
+        console.error("Profile upload error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to upload profile picture",
+        });
+    }
+};
+// const uploadProfilePic = async (req, res) => {
+//     try {
+//         //console.log("yeh hit hogya hai")
+//         const userId = req.user.id; // auth middleware se aayega
+//         const file = req.file;
+
+//         // Validation
+//         if (!file) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "No file uploaded",
+//             });
+//         }
+
+//         // uploadMedia expects array → so wrap in []
+//         const uploaded = await uploadMedia([file], "profile");
+
+//         const imageUrl = uploaded[0]; // single file    
+
+//         // Update UserDetail
+//         const updatedUser = await UserDetail.findOneAndUpdate(
+//             { userId },
+//             { profilePic: imageUrl },
+//             { new: true }
+//         );
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Profile picture updated successfully",
+//             data: updatedUser,
+//         });
+//     } catch (error) {
+//         console.error("Profile upload error:", error);
+
+//         return res.status(500).json({
+//             success: false,
+//             message: "Failed to upload profile picture",
+//         });
+//     }
+// };
+
+
+const uploadCoverPic = async (req, res) => { // upload cover ke liye 
+    try {
+        const userId = req.user.id;
+        const file = req.file;
+
+        // No file
+        if (!file) {
+            return res.status(400).json({
+                success: false,
+                message: "No file uploaded",
+            });
+        }
+
+        // Step 1: Get existing user
+        const userDetail = await UserDetail.findOne({ userId });
+
+        if (!userDetail) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        const oldPublicId = userDetail.cover?.public_id;
+
+        // Step 2: Upload new cover image
+        const uploaded = await uploadMedia([file], "profileCover");
+        const image = uploaded[0]; // { url, public_id }
+
+        // Step 3: Update DB
+        const updatedUser = await UserDetail.findOneAndUpdate(
+            { userId },
+            {
+                cover: {
+                    url: image.url,
+                    public_id: image.public_id,
+                },
+            },
+            { returnDocument: "after" }
+        );
+
+        // Step 4: Delete old cover (SAFE)
+        if (oldPublicId) {
+            try {
+                await cloudinary.uploader.destroy(oldPublicId);
+                console.log("Old cover deleted:", oldPublicId);
+            } catch (err) {
+                console.log("Failed to delete old cover:", err.message);
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Cover image updated successfully",
+            data: updatedUser,
+        });
+
+    } catch (error) {
+        console.error("Cover upload error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to upload cover image",
+        });
+    }
+};
+
+
+module.exports = { getAllUsers, updateUser, deleteUser, toggleVerify, getUserProfile, uploadProfilePic, uploadCoverPic };

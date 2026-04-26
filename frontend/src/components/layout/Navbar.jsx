@@ -73,7 +73,12 @@ const Navbar = () => {
                                 <span className="text-sm font-medium text-[#71717a]">
                                     Hi, {user?.username}
                                 </span>
+
+                                <Link to="/profile" className={`text-sm font-medium transition-colors ${location.pathname === "/profile" ? "text-black" : "text-[#71717a] hover:text-black"}`}>
+                                    Profile
+                                </Link>
                             </div>
+
 
                             {/* Logout Button */}
                             <button onClick={handleLogout} className="bg-black text-white px-4 md:px-6 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-medium hover:bg-[#1a1a1a] transition-colors cursor-pointer whitespace-nowrap">
@@ -88,9 +93,9 @@ const Navbar = () => {
                         className="md:hidden flex flex-col justify-center items-center w-6 h-6 gap-[4px]"
                     >
                         {/* 3 lines for the menu icon, with smooth animation for turning into 'X' */}
-                        <span className={`block w-4 h-[2px] bg-black transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-[6px]' : ''}`}></span>
-                        <span className={`block w-4 h-[2px] bg-black transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0' : ''}`}></span>
-                        <span className={`block w-4 h-[2px] bg-black transition-all duration-300 ${isMobileMenuOpen ? '-rotate-45 -translate-y-[6px]' : ''}`}></span>
+                        <span className={`block w-4 h-0.5 bg-black transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></span>
+                        <span className={`block w-4 h-0.5 bg-black transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0' : ''}`}></span>
+                        <span className={`block w-4 h-0.5 bg-black transition-all duration-300 ${isMobileMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
                     </button>
 
                 </div>
@@ -104,7 +109,7 @@ const Navbar = () => {
                             <Link onClick={() => setIsMobileMenuOpen(false)} to="/" className={`text-base font-medium transition-colors ${location.pathname === "/" ? "text-black" : "text-[#71717a]"}`}>
                                 Home
                             </Link>
-                            <div className="w-full h-[1px] bg-gray-200"></div> {/* Divider */}
+                            <div className="w-full h-px bg-gray-200"></div> {/* Divider */}
                             <Link onClick={() => setIsMobileMenuOpen(false)} to="/signup" className={`text-base font-medium transition-colors ${location.pathname === "/signup" ? "text-black" : "text-[#71717a]"}`}>
                                 Signup
                             </Link>
@@ -114,6 +119,9 @@ const Navbar = () => {
                             <span className="text-base font-medium text-[#71717a]">
                                 Logged in as: <strong className="text-black">{user?.username}</strong>
                             </span>
+                            <Link to="/profile" className={`text-sm font-medium transition-colors ${location.pathname === "/profile" ? "text-black" : "text-[#71717a] hover:text-black"}`}>
+                                Profile
+                            </Link>
                         </div>
                     )}
                 </div>

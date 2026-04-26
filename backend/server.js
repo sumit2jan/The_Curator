@@ -1,20 +1,30 @@
 require("dotenv").config();
-const express = require('express');
-const connectDB = require('./config/db');
-const app = express();
+
+const express = require("express");
 const cors = require("cors");
 
+const connectDB = require("./config/db");
+
+const app = express();
+
+// Middleware
 app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Static
+app.use("/uploads", express.static("uploads"));
+
+// DB
 connectDB();
 
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// Routes
+app.use("/blog", require("./routes"));
 
+// Test route
 app.get("/", (req, res) => {
     res.send("API is running...");
 });
-
-app.use("/blog", require("./routes"));
 
 const PORT = process.env.PORT || 5000;
 

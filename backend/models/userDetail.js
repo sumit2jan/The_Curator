@@ -51,9 +51,27 @@ const userDetailSchema = new mongoose.Schema(
             required: [true, "Date of Birth is required"],
         },
         profilePic: {
-            type: String,
-            default: "/uploads/default.png"
+            url: {
+                type: String,
+                default: "https://res.cloudinary.com/dtzqjly9a/image/upload/v1777125248/default_itqef1.png"
+            },
+            public_id: {
+                type: String,
+                default: null
+            }
+        },
+        cover: {
+            url: {
+                type: String,
+                default: "https://res.cloudinary.com/dtzqjly9a/image/upload/v1777128786/anime-landscape-of-cabins-in-the-countryside-between-mountains_3840x2160_xtrafondos.com_zyuq9c.jpg"
+            },
+            public_id: {
+                type: String,
+                default: null
+            }
         }
+
+
     },
     { timestamps: true }
 );
