@@ -18,8 +18,13 @@ const uploadMedia = async (files, type) => {
       const isImage = file.mimetype.startsWith("image");
       const isVideo = file.mimetype.startsWith("video");
 
+      // Type validation (ADD THIS)
+      if (!isImage && !isVideo) {
+        throw new Error("Only image and video files are allowed");
+      }
+
       //  Size validation
-      if (isImage && file.size > 5 * 1024 * 1024) {
+      if (isImage && file.size > 10* 1024 * 1024) {
         throw new Error("Image exceeds 5MB");
       }
       if (isVideo && file.size > 20 * 1024 * 1024) {
@@ -30,11 +35,8 @@ const uploadMedia = async (files, type) => {
       let folder = "";
 
       switch (type) {
-        case "blogImage":
-          folder = "blog/images";
-          break;
-        case "blogVideo":
-          folder = "blog/videos";
+        case "blogMedia":
+          folder = isVideo ? "blog/videos" : "blog/images";
           break;
         case "blogCover":
           folder = "blog/covers";
@@ -58,12 +60,12 @@ const uploadMedia = async (files, type) => {
       // Delete local file (success)
       deleteLocalFile(file.path);
 
-      // Save URL
+      // UPDATED RETURN (IMPORTANT)
       results.push({
         url: result.secure_url,
         public_id: result.public_id,
+        type: isVideo ? "video" : "image"
       });
-
 
     } catch (error) {
       console.log("Cloudinary failed, using local:", error.message);
@@ -74,6 +76,7 @@ const uploadMedia = async (files, type) => {
       results.push({
         url: `/${localPath}`,
         public_id: null,
+        type: file.mimetype.startsWith("video") ? "video" : "image"
       });
     }
   }
@@ -82,6 +85,91 @@ const uploadMedia = async (files, type) => {
 };
 
 module.exports = uploadMedia;
+
+// const cloudinary = require("../config/cloudinary");
+// const fs = require("fs");
+
+// // Helper → delete local file
+// const deleteLocalFile = (filePath) => {
+//   if (fs.existsSync(filePath)) {
+//     fs.unlinkSync(filePath);
+//   }
+// };
+
+// // Main upload function
+// const uploadMedia = async (files, type) => {
+//   const results = [];
+
+//   for (const file of files) {
+//     try {
+//       //  File type detect
+//       const isImage = file.mimetype.startsWith("image");
+//       const isVideo = file.mimetype.startsWith("video");
+
+//       //  Size validation
+//       if (isImage && file.size > 5 * 1024 * 1024) {
+//         throw new Error("Image exceeds 5MB");
+//       }
+//       if (isVideo && file.size > 20 * 1024 * 1024) {
+//         throw new Error("Video exceeds 20MB");
+//       }
+
+//       // Folder mapping
+//       let folder = "";
+
+//       switch (type) {
+//         case "blogImage":
+//           folder = "blog/images";
+//           break;
+//         case "blogVideo":
+//           folder = "blog/videos";
+//           break;
+//         case "blogCover":
+//           folder = "blog/covers";
+//           break;
+//         case "profile":
+//           folder = "user/profilePics";
+//           break;
+//         case "profileCover":
+//           folder = "user/cover";
+//           break;
+//         default:
+//           throw new Error("Invalid upload type");
+//       }
+
+//       // Upload to Cloudinary
+//       const result = await cloudinary.uploader.upload(file.path, {
+//         folder,
+//         resource_type: isVideo ? "video" : "image",
+//       });
+
+//       // Delete local file (success)
+//       deleteLocalFile(file.path);
+
+//       // Save URL
+//       results.push({
+//         url: result.secure_url,
+//         public_id: result.public_id,
+//       });
+
+
+//     } catch (error) {
+//       console.log("Cloudinary failed, using local:", error.message);
+
+//       // fallback → local path
+//       const localPath = file.path.replace(/\\/g, "/");
+
+//       results.push({
+//         url: `/${localPath}`,
+//         public_id: null,
+//       });
+//     }
+//   }
+
+//   return results;
+// };
+
+// module.exports = uploadMedia;
 
 
 

@@ -1,79 +1,173 @@
 const mongoose = require("mongoose");
+
 const userDetailSchema = new mongoose.Schema(
     {
         userId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: [true, "Student reference is required"],
+            required: true,
             unique: true,
         },
 
         firstName: {
             type: String,
-            required: [true, "First name is required"],
             trim: true,
-            minlength: [2, "First name must be at least 2 characters"],
+            default: "",
+            validate: {
+                validator: function (v) {
+                    return v === "" || v.length >= 2;
+                },
+                message: "First name must be at least 2 characters",
+            },
             maxlength: [30, "First name cannot exceed 30 characters"],
         },
 
         lastName: {
             type: String,
-            required: [true, "Last name is required"],
             trim: true,
-            minlength: [2, "Last name must be at least 2 characters"],
+            default: "",
+            validate: {
+                validator: function (v) {
+                    return v === "" || v.length >= 2;
+                },
+                message: "Last name must be at least 2 characters",
+            },
             maxlength: [30, "Last name cannot exceed 30 characters"],
         },
 
         gender: {
             type: String,
-            required: [true, "Gender is required"],
-            enum: {
-                values: ["Male", "Female", "Other"],
-                message: "Gender must be Male, Female, or Other",
-            },
+            enum: ["Male", "Female", "Other"],
+            default: null,
         },
 
         country: {
             type: String,
-            required: [true, "Country is required"],
             trim: true,
-            minlength: [2, "Country name too short"]
+            default: "",
+            validate: {
+                validator: function (v) {
+                    return v === "" || v.length >= 2;
+                },
+                message: "Country name too short",
+            },
         },
 
         bio: {
             type: String,
-            required: [true, "Bio is required"],
-            maxlength: [500, "Bio cannot exceed 500 characters"]
+            default: "",
+            maxlength: [500, "Bio cannot exceed 500 characters"],
         },
 
         dob: {
             type: Date,
-            required: [true, "Date of Birth is required"],
+            validate: {
+                validator: function (value) {
+                    return !value || value <= new Date();
+                },
+                message: "DOB cannot be in the future",
+            },
         },
+
         profilePic: {
             url: {
                 type: String,
-                default: "https://res.cloudinary.com/dtzqjly9a/image/upload/v1777125248/default_itqef1.png"
+                default:
+                    "https://res.cloudinary.com/dtzqjly9a/image/upload/v1777125248/default_itqef1.png",
             },
             public_id: {
                 type: String,
-                default: null
-            }
+                default: null,
+            },
         },
+
         cover: {
             url: {
                 type: String,
-                default: "https://res.cloudinary.com/dtzqjly9a/image/upload/v1777128786/anime-landscape-of-cabins-in-the-countryside-between-mountains_3840x2160_xtrafondos.com_zyuq9c.jpg"
+                default:
+                    "https://res.cloudinary.com/dtzqjly9a/image/upload/v1777128786/anime-landscape-of-cabins-in-the-countryside-between-mountains_3840x2160_xtrafondos.com_zyuq9c.jpg",
             },
             public_id: {
                 type: String,
-                default: null
-            }
-        }
-
-
+                default: null,
+            },
+        },
     },
     { timestamps: true }
 );
 
 module.exports = mongoose.model("UserDetail", userDetailSchema);
+
+// const mongoose = require("mongoose");
+// const userDetailSchema = new mongoose.Schema(
+//     {
+//         userId: {
+//             type: mongoose.Schema.Types.ObjectId,
+//             ref: "User",
+//             required: [true, "Student reference is required"],
+//             unique: true,
+//         },
+
+//         firstName: {
+//             type: String,
+//             trim: true,
+//             minlength: [2, "First name must be at least 2 characters"],
+//             maxlength: [30, "First name cannot exceed 30 characters"],
+//         },
+
+//         lastName: {
+//             type: String,
+//             trim: true,
+//             minlength: [2, "Last name must be at least 2 characters"],
+//             maxlength: [30, "Last name cannot exceed 30 characters"],
+//         },
+
+//         gender: {
+//             type: String,
+//             enum: {
+//                 values: ["Male", "Female", "Other"],
+//                 message: "Gender must be Male, Female, or Other",
+//             },
+//         },
+
+//         country: {
+//             type: String,
+//             trim: true,
+//             minlength: [2, "Country name too short"]
+//         },
+
+//         bio: {
+//             type: String,
+//             maxlength: [500, "Bio cannot exceed 500 characters"]
+//         },
+
+//         dob: {
+//             type: Date,
+//         },
+//         profilePic: {
+//             url: {
+//                 type: String,
+//                 default: "https://res.cloudinary.com/dtzqjly9a/image/upload/v1777125248/default_itqef1.png"
+//             },
+//             public_id: {
+//                 type: String,
+//                 default: null
+//             }
+//         },
+//         cover: {
+//             url: {
+//                 type: String,
+//                 default: "https://res.cloudinary.com/dtzqjly9a/image/upload/v1777128786/anime-landscape-of-cabins-in-the-countryside-between-mountains_3840x2160_xtrafondos.com_zyuq9c.jpg"
+//             },
+//             public_id: {
+//                 type: String,
+//                 default: null
+//             }
+//         }
+
+
+//     },
+//     { timestamps: true }
+// );
+
+// module.exports = mongoose.model("UserDetail", userDetailSchema);

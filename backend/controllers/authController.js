@@ -1,11 +1,13 @@
 const User = require("../models/userModel");
+const UserDetail = require("../models/userDetail");
 const UserVerification = require("../models/userVerificationModel");
 
 const { sendOTPEmail, sendWelcomeEmail, sendResetPasswordEmail, sendPasswordChangedEmail } = require("../utils/emailService");
 const generateOTP = require("../utils/otp");
 const { hashData, compareData } = require("../utils/hash");
-const { generateToken } = require("../utils/jwt");
+const { generateAccessToken, generateRefreshToken, verifyRefreshToken, verifyAccesToken } = require("../utils/jwt");
 
+const passport = require("passport");
 // send otp to user 
 // const sendSignupOTP = async (req, res) => {
 //     try {
@@ -158,7 +160,21 @@ const sendSignupOTP = async (req, res) => {
 
         // Check if user already exists in the main User collection
         const existingUser = await User.findOne({ email });
+
+        // if user is from the google Oauth 
         if (existingUser) {
+
+            // Account created using Google OAuth
+            if (existingUser.authProvider === "google") {
+                return res.status(400).json({
+                    success: false,
+                    message: "Please login using Continue with Google",
+                    data: null,
+                    error: null,
+                });
+            }
+
+            // Local account already exists
             return res.status(400).json({
                 success: false,
                 message: "User already exists",
@@ -166,6 +182,9 @@ const sendSignupOTP = async (req, res) => {
                 error: null,
             });
         }
+
+
+
 
         // Check existing verification record
         const existingVerification = await UserVerification.findOne({ email });
@@ -473,10 +492,27 @@ const verifyOTPAndRegister = async (req, res) => {
             isVerified: true,
         });
 
+
+
         if (!user) {
             return res.status(500).json({
                 success: false,
                 message: "User creation failed",
+                data: null,
+                error: null,
+            });
+        }
+
+        // create userDetailModel after creating the user
+
+        const userDetail = await UserDetail.create({
+            userId: user._id
+        });
+
+        if (!userDetail) {
+            return res.status(500).json({
+                success: false,
+                message: "Userdetail creation failed",
                 data: null,
                 error: null,
             });
@@ -518,6 +554,7 @@ const verifyOTPAndRegister = async (req, res) => {
 //login
 const login = async (req, res) => {
     try {
+        console.log(req)
         const { email, password } = req.body;
         //  Validate
         if (!email || !password) {
@@ -541,6 +578,16 @@ const login = async (req, res) => {
                 error: null,
             });
         }
+
+        if (user.authProvider === "google") {
+            return res.status(400).json({
+                success: false,
+                message: "Please login with Using Continue With Google",
+                data: null,
+                error: null,
+            });
+        }
+
 
         // Compare password
         const isMatch = await compareData(password, user.password);
@@ -607,14 +654,25 @@ const login = async (req, res) => {
 
 
         // Generate token
-        const token = generateToken(user._id);
+        const token = generateAccessToken(user._id);
+        const refreshToken = generateRefreshToken(user._id);
 
+        const deviceInfo = req.headers["user-agent"] || "Unknown Device";
+        const ipAddress = req.ip;
+
+        await User.findByIdAndUpdate(user._id, {
+            $pull: { refreshTokens: { deviceInfo: deviceInfo } },
+        });
+
+        await user.addRefreshToken(refreshToken, deviceInfo, ipAddress);
+        console.log(token, refreshToken)
         // Success response
         return res.status(200).json({
             success: true,
             message: "Login successful",
             data: {
                 token,
+                refreshToken,
                 user: {
                     _id: user._id,
                     username: user.username,
@@ -633,6 +691,224 @@ const login = async (req, res) => {
         });
     }
 };
+
+//used to refresh the refreshtoken and token 
+const refresh = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(401).json({
+                success: false,
+                data: false,
+                message: "Invalid Token",
+            });
+        }
+
+        let decoded;
+        try {
+            decoded = verifyRefreshToken(refreshToken);
+        } catch (error) {
+            console.error("error in refreh token", error.message);
+            return res.status(401).json({
+                success: false,
+                data: false,
+                message: "Refresh token expired or invalid. Please login again.",
+            });
+        }
+
+        const user = await User.findById(decoded.id);
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                data: false,
+                message: "User no longer exists",
+            });
+        }
+        if (!user.hasRefreshToken(refreshToken)) {
+            return res.status(401).json({
+                success: false,
+                data: false,
+                message: "Session revoked. Please login again.",
+            });
+        }
+
+        // exports.refresh update
+        const deviceInfo = req.headers["user-agent"] || "Unknown Device";
+        const ipAddress = req.ip;
+
+        // CHANGE THIS: Instead of just user.removeRefreshToken(refreshToken)
+        // Use an atomic update to wipe the device sessions and add the new one
+        await User.findByIdAndUpdate(user._id, {
+            $pull: { refreshTokens: { deviceInfo: deviceInfo } },
+        });
+
+        const newRefreshToken = generateRefreshToken(user);
+        const newToken = generateAccessToken(user);
+
+        // Add the rotated token
+        await user.addRefreshToken(newRefreshToken, deviceInfo, ipAddress);
+        // 5. Send both back
+        res.status(200).json({
+            success: true,
+            data: {
+                token: newToken,
+                refreshToken: newRefreshToken,
+            },
+            message: "Token refreshed",
+        });
+    } catch (error) {
+        console.error("refresh token Error: ", error.message);
+
+        return res.status(500).json({
+            success: false,
+            data: false,
+            message: "Could not refresh token",
+        });
+    }
+};
+
+// Step 1 — redirect to Google
+const googleAuth = passport.authenticate("google", {
+    scope: ["profile", "email"],
+});
+
+// Step 2 — Google redirects back here
+const googleCallback = (req, res, next) => {
+    console.log("google callback hit");
+
+    passport.authenticate(
+        "google",
+        {
+            session: false,
+            failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed`,
+        },
+        async (error, user) => {
+            try {
+                if (error || !user) {
+                    console.log("No user or error:", error);
+
+                    return res.send(`
+            <script>
+              window.opener.postMessage(
+                { error: "google_failed" },
+                "${process.env.CLIENT_URL}"
+              );
+              window.close();
+            </script>
+          `);
+                }
+
+                console.log("user found:", user._id);
+
+                // 🔐 Generate tokens
+                const token = generateAccessToken(user); // keep name consistent
+                const refreshToken = generateRefreshToken(user);
+
+                console.log("tokens generated");
+
+                const deviceInfo = req.headers["user-agent"] || "Unknown Device";
+                const ipAddress = req.ip;
+
+                // 🧹 Remove existing session for same device
+                await User.findByIdAndUpdate(user._id, {
+                    $pull: { refreshTokens: { deviceInfo: deviceInfo } },
+                });
+
+                // Save new refresh token
+                await user.addRefreshToken(refreshToken, deviceInfo, ipAddress);
+
+                console.log("refresh token saved");
+
+                // SAFER RESPONSE (no string injection issues)
+                const payload = {
+                    user,
+                    token,
+                    refreshToken,
+                };
+
+                console.log(payload)
+
+                res.send(`
+          <script>
+           console.log(window.opener);
+            window.opener.postMessage(
+              ${JSON.stringify(payload)},
+              "${process.env.CLIENT_URL}"
+            );
+            window.close();
+          </script>
+        `);
+
+            } catch (err) {
+                console.error("Google Callback Error:", err.message);
+
+                res.redirect(
+                    `${process.env.CLIENT_URL}/login?error=server_error`
+                );
+            }
+        }
+    )(req, res, next);
+};
+
+// const googleCallback = (req, res, next) => {
+//     passport.authenticate(
+//         "google",
+//         {
+//             session: false,
+//             failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed`,
+//         },
+//         async (error, user) => {
+//             try {
+//                 if (error || !user) {
+//                     console.log("No user or error:", error);
+//                     return res.send(`
+//   <script>
+//     window.opener.postMessage({ error: "google_failed" }, "${process.env.CLIENT_URL}");
+//     window.close();
+//   </script>
+// `);
+//                 }
+//                 console.log("user found:", user._id);
+
+//                 const accessToken = generateAccessToken(user);
+//                 console.log("accessToken generated");
+
+//                 const refreshToken = generateRefreshToken(user);
+//                 console.log("refreshToken generated");
+
+//                 const deviceInfo = req.headers["user-agent"] || "Unknown Device";
+//                 const ipAddress = req.ip;
+
+//                 // Clear any existing Google or Local sessions for this device
+//                 await User.findByIdAndUpdate(user._id, {
+//                     $pull: { refreshTokens: { deviceInfo: deviceInfo } },
+//                 });
+
+//                 await user.addRefreshToken(refreshToken, deviceInfo, ipAddress);
+//                 console.log("refresh token saved");
+
+//                 /* // Redirect to frontend with both tokens in query params
+//                 res.redirect(
+//                   `${process.env.CLIENT_URL}/auth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}`,
+//                 ); */
+
+//                 res.send(`
+//   <script>
+//     window.opener.postMessage(
+//       { accessToken: "${accessToken}", refreshToken: "${refreshToken}" },
+//       "${process.env.CLIENT_URL}"
+//     );
+//     window.close();
+//   </script>
+// `);
+//             } catch (error) {
+//                 console.error("Wavelog Google Callback Error:", error.message);
+//                 res.redirect(`${process.env.CLIENT_URL}/login?error=server_error`);
+//             }
+//         },
+//     )(req, res, next);
+// };
 
 // forgot otp send 
 const sendResetOTP = async (req, res) => {
@@ -1088,7 +1364,7 @@ const resendVerifyOTP = async (req, res) => {
 
         // 4. Cooldown and Attempts check
         let currentAttempts = 0;
-        
+
         if (existingVerification) {
             if (existingVerification.otp.attempts >= 5) {
                 return res.status(403).json({
@@ -1107,7 +1383,7 @@ const resendVerifyOTP = async (req, res) => {
                     error: null,
                 });
             }
-            
+
             currentAttempts = existingVerification.otp.attempts;
         }
 
@@ -1175,5 +1451,8 @@ module.exports = {
     resetPassword,
     changePassword,
     verifyOTP,
-    resendVerifyOTP
+    resendVerifyOTP,
+    refresh,
+    googleAuth,
+    googleCallback,
 };

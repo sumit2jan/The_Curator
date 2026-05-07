@@ -25,7 +25,7 @@ const Navbar = () => {
         <div className="fixed top-4 md:top-6 left-0 w-full flex flex-col items-center z-50 px-3 md:px-0">
 
             {/* The exact floating white pill */}
-            <nav className="relative w-full md:w-[96%] max-w-[1500px] 
+            <nav className="relative w-full md:w-[96%] max-w-375 
         bg-[#f8f8f8] text-black 
         rounded-full px-4 md:px-8 py-2 md:py-2.5
         flex items-center justify-between 
@@ -34,11 +34,11 @@ const Navbar = () => {
                 {/* Logo Section */}
                 <Link to="/" className="flex items-center gap-2 md:gap-3">
                     <div className="w-6 h-6 md:w-8 md:h-8 bg-black text-white flex items-center justify-center rounded font-bold text-[10px] md:text-sm tracking-wider">
-                        TC
+                        CD
                     </div>
                     {/* Playfair Display font */}
                     <span className="font-['Playfair_Display'] font-bold text-base md:text-xl tracking-tight">
-                        The Curator
+                       Campus Diaries
                     </span>
                 </Link>
 
@@ -70,13 +70,16 @@ const Navbar = () => {
                         <>
                             {/* Desktop Username (Mobile pe hidden rahega) */}
                             <div className="hidden md:flex items-center gap-6">
-                                <span className="text-sm font-medium text-[#71717a]">
-                                    Hi, {user?.username}
-                                </span>
 
+                                <Link to="/blogsfeed" className={`text-sm font-medium transition-colors ${location.pathname === "/blogsfeed" ? "text-black" : "text-[#71717a] hover:text-black"}`}>
+                                    Posts
+                                </Link>
                                 <Link to="/profile" className={`text-sm font-medium transition-colors ${location.pathname === "/profile" ? "text-black" : "text-[#71717a] hover:text-black"}`}>
                                     Profile
                                 </Link>
+                                <span className="text-sm font-medium text-[#71717a]">
+                                    Hi {user?.username}
+                                </span>
                             </div>
 
 

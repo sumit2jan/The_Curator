@@ -1,22 +1,39 @@
 const jwt = require("jsonwebtoken");
 
-const generateToken = (userId) => {
+const generateAccessToken = (userId) => {
     if (!process.env.JWT_SECRET) {
         throw new Error("JWT_SECRET is missing");
     }
     return jwt.sign(
         { id: userId },
         process.env.JWT_SECRET,
-        { expiresIn: "7d" }
+        { expiresIn: "15min" }
+    );
+};
+
+const generateRefreshToken = (userId) => {
+    if (!process.env.JWT_REFRESH_SECRET) {
+        throw new Error("JWT_SECRET is missing");
+    }
+    return jwt.sign(
+        { id: userId },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: "30d" }
     );
 };
 
 // Verify Token
-const verifyToken = (token) => {
+const verifyAccesToken = (token) => {
     return jwt.verify(token, process.env.JWT_SECRET);
 };
 
+const verifyRefreshToken = (token) => {
+    return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+};
+
 module.exports = {
-    generateToken,
-    verifyToken,
+    generateRefreshToken,
+    generateAccessToken,
+    verifyRefreshToken,
+    verifyAccesToken,
 };

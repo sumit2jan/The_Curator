@@ -1,8 +1,4 @@
-//import './style.css'
-//import './App.css'
 import './index.css'
-//import 'bootstrap/dist/css/bootstrap.min.css';
-//import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -12,6 +8,12 @@ import Home from './pages/Home';
 import Navbar from './components/layout/Navbar';
 import SIGNUP from './pages/Signup';
 import PROFILE from './pages/Profile';
+import CREATEBLOG from './pages/Blog';
+import BLOGSPREVIEW from './pages/BlogPreview';
+import BLOGSPREVIEWSLUG from './pages/BlogPreviewSlug';
+import BLOGSFEED from './pages/BlogFeed';
+import AI from './pages/AIBlogGenerator';
+// import PrivateRoute from "./middleware/privateRoute";
 
 
 function App() {
@@ -35,11 +37,23 @@ function App() {
         <Routes>
           <Route path='/' element={<Home />} />
           <Route path='/login' element={<Login />} />
+          <Route path='*' element={<p>404 Not Found</p>} />
           <Route path='/dashboard' element={<Dashboard />} />
           <Route path='/signup' element={<SIGNUP />} />
           <Route path='/profile' element={<PROFILE />} />
+          <Route path='/profile/:id' element={<PROFILE />} />     {/*to show user profile to other*/}
+          <Route path='/createblog' element={<CREATEBLOG />} />
+          <Route path='/blogsfeed' element={<BLOGSFEED />} />
+          <Route path='/updateblog/:id' element={<CREATEBLOG />} />
+          <Route path='/previewblog/:id' element={<BLOGSPREVIEW />} />
+          <Route path='/ai' element={<AI />} />
+
+          <Route path='/blog/:slug' element={<BLOGSPREVIEWSLUG />} />
+
+          {/* <Route element={<PrivateRoute />}></Route> */}
+
         </Routes>
-      </BrowserRouter>
+      </BrowserRouter >
     </>
 
   );

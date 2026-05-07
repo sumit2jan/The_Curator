@@ -24,7 +24,9 @@ const EditProfileModal = ({ user, onClose, refresh }) => {
             toast.success("Cover updated");
             refresh();
         } catch (err) {
-            toast.error("Cover upload failed");
+            //console.log(err.response);
+            toast.error(err.response?.data?.message || "Cover upload failed");
+
         }
     };
 
@@ -37,6 +39,7 @@ const EditProfileModal = ({ user, onClose, refresh }) => {
             country: user.country || "",
             bio: user.bio || "",
             gender: user.gender || "",
+            profileVisibility: user.profileVisibility || "",
             dob: user.dob ? user.dob.split("T")[0] : "",
         },
 
@@ -47,6 +50,7 @@ const EditProfileModal = ({ user, onClose, refresh }) => {
             email: Yup.string().email("Invalid email").required("Email is required"),
             country: Yup.string().required("Country is required"),
             gender: Yup.string().required("Gender is required"),
+            profileVisibility: Yup.string().required("profilecisibility  is required"),
             dob: Yup.date().required("Date of birth is required"),
             bio: Yup.string().max(500, "Max 500 characters"),
         }),
@@ -60,89 +64,220 @@ const EditProfileModal = ({ user, onClose, refresh }) => {
                 refresh();
                 onClose();
             } catch (err) {
+                console.log(err.response);
                 toast.error(err.response?.data?.message || "Update failed");
             } finally {
                 setSubmitting(false);
             }
         },
     });
-
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <>
+            {/* CINEMATIC ANIMATIONS */}
+            <style>{`
+      @keyframes blurFade {
+        0% { opacity: 0; backdrop-filter: blur(0px); }
+        100% { opacity: 1; backdrop-filter: blur(12px); }
+      }
+      @keyframes slideUpFade {
+        0% { opacity: 0; transform: translateY(30px) scale(0.98); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      .animate-bg { animation: blurFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      .animate-card { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    `}</style>
 
-            <div
-                className="absolute inset-0 bg-black/80 backdrop-blur-md"
-                onClick={onClose}
-            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
 
-            <div className="relative z-10 w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-8 md:p-12 shadow-2xl max-h-[90vh] overflow-y-auto">
+                {/* BACKDROP */}
+                <div
+                    className="absolute inset-0 bg-black/80 animate-bg"
+                    onClick={onClose}
+                />
 
-                <div className="flex justify-between items-start mb-8">
-                    <h2 className="text-3xl font-bold text-white">Profile</h2>
+                {/* MODAL */}
+                <div className="relative z-10 w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-8 md:p-12 shadow-[0_40px_100px_rgba(0,0,0,0.9)] animate-card max-h-[90vh] overflow-y-auto">
 
-                    <button onClick={onClose} className="text-gray-400 hover:text-white">
-                        ✕
-                    </button>
-                </div>
+                    {/* HEADER */}
+                    <div className="flex justify-between items-start mb-10">
+                        <div>
+                            <h2
+                                className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-2"
+                                style={{ fontFamily: "'Playfair Display', serif" }}
+                            >
+                                Profile.
+                            </h2>
+                            <p className="text-[#a1a1aa] text-sm font-light tracking-wide">
+                                Refine your identity and personal details.
+                            </p>
+                        </div>
 
-                {/* COVER */}
-                <div className="relative group h-45 w-full rounded-xl overflow-hidden mb-6 cursor-pointer">
-                    <img src={user.cover?.url} className="w-full h-full object-cover" />
-
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                        <span className="text-white text-sm">Change Cover</span>
+                        <button
+                            onClick={onClose}
+                            className="text-[#71717a] hover:text-white p-2 rounded-full hover:bg-white/5 transition"
+                        >
+                            ✕
+                        </button>
                     </div>
 
-                    <input
-                        type="file"
-                        className="absolute inset-0 opacity-0"
-                        onChange={(e) => {
-                            if (e.target.files[0]) {
-                                handleCoverUpload(e.target.files[0]);
-                            }
-                        }}
-                    />
-                </div>
+                    {/* COVER */}
+                    <div className="relative group h-45 w-full rounded-xl overflow-hidden mb-6 cursor-pointer">
+                        <img src={user.cover?.url} className="w-full h-full object-cover" />
 
-                <form onSubmit={formik.handleSubmit} className="space-y-5">
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                            <span className="text-white text-sm">Change Cover</span>
+                        </div>
 
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <input {...formik.getFieldProps("firstName")} placeholder="First Name" className="input" />
-                        <input {...formik.getFieldProps("lastName")} placeholder="Last Name" className="input" />
+                        <input
+                            type="file"
+                            className="absolute inset-0 opacity-0"
+                            onChange={(e) => {
+                                if (e.target.files[0]) {
+                                    handleCoverUpload(e.target.files[0]);
+                                }
+                            }}
+                        />
                     </div>
 
-                    <input {...formik.getFieldProps("username")} placeholder="Username" className="input" />
+                    {/* FORM (UNCHANGED LOGIC) */}
+                    <form onSubmit={formik.handleSubmit} className="space-y-5">
 
-                    <input {...formik.getFieldProps("email")} placeholder="Email" className="input" />
+                        {/* FIRST + LAST */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <input {...formik.getFieldProps("firstName")} placeholder="First Name" className={`input ${formik.touched.firstName && formik.errors.firstName ? "border-red-500" : ""}`} />
+                                {formik.touched.firstName && formik.errors.firstName && (
+                                    <p className="text-red-500 text-xs mt-1">{formik.errors.firstName}</p>
+                                )}
+                            </div>
 
-                    <select {...formik.getFieldProps("gender")} className="input">
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                    </select>
+                            <div>
+                                <input {...formik.getFieldProps("lastName")} placeholder="Last Name" className={`input ${formik.touched.lastName && formik.errors.lastName ? "border-red-500" : ""}`} />
+                                {formik.touched.lastName && formik.errors.lastName && (
+                                    <p className="text-red-500 text-xs mt-1">{formik.errors.lastName}</p>
+                                )}
+                            </div>
+                        </div>
 
-                    <input type="date" {...formik.getFieldProps("dob")} className="input" />
+                        {/* USERNAME */}
+                        <div>
+                            <input {...formik.getFieldProps("username")} placeholder="Username" className={`input ${formik.touched.username && formik.errors.username ? "border-red-500" : ""}`} />
+                            {formik.touched.username && formik.errors.username && (
+                                <p className="text-red-500 text-xs mt-1">{formik.errors.username}</p>
+                            )}
+                        </div>
 
-                    <Select
-                        options={countryOptions}
-                        value={countryOptions.find(c => c.label === formik.values.country)}
-                        onChange={(val) => formik.setFieldValue("country", val.label)}
-                    />
+                        {/* EMAIL */}
+                        <div>
+                            <input {...formik.getFieldProps("email")} placeholder="Email" className={`input ${formik.touched.email && formik.errors.email ? "border-red-500" : ""}`} />
+                            {formik.touched.email && formik.errors.email && (
+                                <p className="text-red-500 text-xs mt-1">{formik.errors.email}</p>
+                            )}
+                        </div>
 
-                    <textarea {...formik.getFieldProps("bio")} rows={3} placeholder="Bio" className="input" />
+                        {/* GENDER */}
+                        <div>
+                            <select {...formik.getFieldProps("gender")} className={`input ${formik.touched.gender && formik.errors.gender ? "border-red-500" : ""}`}>
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            {formik.touched.gender && formik.errors.gender && (
+                                <p className="text-red-500 text-xs mt-1">{formik.errors.gender}</p>
+                            )}
+                        </div>
+                        {/* profile visibility */}
+                        <div>
+                            <select {...formik.getFieldProps("profileVisibility")} className={`input ${formik.touched.profileVisibility && formik.errors.profileVisibility ? "border-red-500" : ""}`}>
+                                <option value="">Select visibility</option>
+                                <option value="public">public</option>
+                                <option value="private">private</option>
+                            </select>
+                            {formik.touched.profileVisibility && formik.errors.profileVisibility && (
+                                <p className="text-red-500 text-xs mt-1">{formik.errors.profileVisibility}</p>
+                            )}
+                        </div>
 
-                    <button
-                        type="submit"
-                        className="w-full bg-white text-black py-3 rounded-full font-semibold"
-                    >
-                        {formik.isSubmitting ? "Saving..." : "Save Changes"}
-                    </button>
+                        {/* DOB */}
+                        <div>
+                            <input
+                                type="date"
+                                max={new Date().toISOString().split("T")[0]}
+                                {...formik.getFieldProps("dob")}
+                                className={`input ${formik.touched.dob && formik.errors.dob ? "border-red-500" : ""}`}
+                            />
+                            {formik.touched.dob && formik.errors.dob && (
+                                <p className="text-red-500 text-xs mt-1">{formik.errors.dob}</p>
+                            )}
+                        </div>
 
-                </form>
+                        {/* COUNTRY */}
+                        <div>
+                            <Select
+                                options={countryOptions}
+                                value={countryOptions.find(c => c.label === formik.values.country)}
+                                onChange={(val) => {
+                                    formik.setFieldValue("country", val.label);
+                                    formik.setFieldTouched("country", true);
+                                }}
+                                styles={{
+                                    control: (base) => ({
+                                        ...base,
+                                        backgroundColor: "#111",
+                                        borderColor: "#333",
+                                        borderRadius: "10px",
+                                        padding: "4px",
+                                        color: "white",
+                                    }),
+                                    menu: (base) => ({
+                                        ...base,
+                                        backgroundColor: "#111",
+                                    }),
+                                    option: (base, state) => ({
+                                        ...base,
+                                        backgroundColor: state.isFocused ? "#222" : "#111",
+                                        color: "white",
+                                    }),
+                                    singleValue: (base) => ({
+                                        ...base,
+                                        color: "white",
+                                    }),
+                                }}
+                            />
+                            {formik.touched.country && formik.errors.country && (
+                                <p className="text-red-500 text-xs mt-1">{formik.errors.country}</p>
+                            )}
+                        </div>
+
+                        {/* BIO */}
+                        <div>
+                            <textarea {...formik.getFieldProps("bio")} rows={3} placeholder="Bio" className={`input ${formik.touched.bio && formik.errors.bio ? "border-red-500" : ""}`} />
+                            {formik.touched.bio && formik.errors.bio && (
+                                <p className="text-red-500 text-xs mt-1">{formik.errors.bio}</p>
+                            )}
+                        </div>
+
+                        {/* BUTTON */}
+                        <button
+                            type="submit"
+                            disabled={!formik.isValid || formik.isSubmitting}
+                            className={`w-full py-3 rounded-full font-semibold transition ${!formik.isValid
+                                ? "bg-gray-600 cursor-not-allowed"
+                                : "bg-white text-black hover:scale-105"
+                                }`}
+                        >
+                            {formik.isSubmitting ? "Saving..." : "Save Changes"}
+                        </button>
+
+                    </form>
+                </div>
             </div>
-        </div>
+        </>
     );
+
+
+
 };
 
 export default EditProfileModal;
@@ -150,205 +285,202 @@ export default EditProfileModal;
 
 
 
-// import React from "react";
-// import API from "../api/axios";
-// import { toast } from "react-toastify";
-// import { useFormik } from "formik";
-// import * as Yup from "yup";
 
-// const EditProfileModal = ({ user, onClose, refresh }) => {
+// return (
+//     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
 
-//     const formik = useFormik({
-//         initialValues: {
-//             firstName: user.firstName || "",
-//             lastName: user.lastName || "",
-//             username: user.username || "",
-//             email: user.email || "",
-//             country: user.country || "",
-//             bio: user.bio || "",
-//         },
+//         <div
+//             className="absolute inset-0 bg-black/80 backdrop-blur-md"
+//             onClick={onClose}
+//         />
 
-//         validationSchema: Yup.object({
-//             firstName: Yup.string().required("First name is required"),
-//             lastName: Yup.string().required("Last name is required"),
-//             username: Yup.string().min(3).required("Username is required"),
-//             email: Yup.string().email("Invalid email").required("Email is required"),
-//             country: Yup.string().required("Country is required"),
-//             bio: Yup.string().max(200, "Max 200 characters"),
-//         }),
+//         <div className="relative z-10 w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-8 md:p-12 shadow-2xl max-h-[90vh] overflow-y-auto">
 
-//         onSubmit: async (values, { setSubmitting }) => {
-//             try {
-//                 await API.put(`/user/update/${user._id || user.userId}`, values);
+//             <div className="flex justify-between items-start mb-8">
+//                 <h2 className="text-3xl font-bold text-white">Profile</h2>
 
-//                 toast.success("Profile updated successfully");
+//                 <button onClick={onClose} className="text-gray-400 hover:text-white">
+//                     ✕
+//                 </button>
+//             </div>
 
-//                 refresh();
-//                 onClose();
-//             } catch (err) {
-//                 toast.error(err.response?.data?.message || "Update failed");
-//             } finally {
-//                 setSubmitting(false);
-//             }
-//         },
-//     });
+//             {/* COVER */}
+//             <div className="relative group h-45 w-full rounded-xl overflow-hidden mb-6 cursor-pointer">
+//                 <img src={user.cover?.url} className="w-full h-full object-cover" />
 
-//     return (
-//         <>
-//             {/*Cinematic Animations */}
-//             <style>{`
-//                 @keyframes blurFade {
-//                     0% { opacity: 0; backdrop-filter: blur(0px); }
-//                     100% { opacity: 1; backdrop-filter: blur(12px); }
-//                 }
-//                 @keyframes slideUpFade {
-//                     0% { opacity: 0; transform: translateY(30px) scale(0.98); }
-//                     100% { opacity: 1; transform: translateY(0) scale(1); }
-//                 }
-//                 .animate-bg { animation: blurFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-//                 .animate-card { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-//             `}</style>
+//                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center">
+//                     <span className="text-white text-sm">Change Cover</span>
+//                 </div>
 
-//             <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-
-//                 {/*Intensely Dark Blurred Overlay */}
-//                 <div
-//                     className="absolute inset-0 bg-black/80 animate-bg"
-//                     onClick={onClose}
+//                 <input
+//                     type="file"
+//                     className="absolute inset-0 opacity-0"
+//                     onChange={(e) => {
+//                         if (e.target.files[0]) {
+//                             handleCoverUpload(e.target.files[0]);
+//                         }
+//                     }}
 //                 />
+//             </div>
 
-//                 {/*High-End Dark Modal */}
-//                 <div className="relative z-10 w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-8 md:p-12 shadow-[0_40px_100px_rgba(0,0,0,0.9)] animate-card max-h-[90vh] overflow-y-auto custom-scrollbar">
+//             <form onSubmit={formik.handleSubmit} className="space-y-5">
 
-//                     {/*Editorial Header */}
-//                     <div className="flex justify-between items-start mb-10">
-//                         <div>
-//                             <h2
-//                                 className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-2"
-//                                 style={{ fontFamily: "'Playfair Display', serif" }}
-//                             >
-//                                 Profile.
-//                             </h2>
-//                             <p className="text-[#a1a1aa] text-sm font-light tracking-wide">
-//                                 Refine your identity and personal details.
-//                             </p>
-//                         </div>
+//                 {/* FIRST + LAST NAME */}
+//                 <div className="grid md:grid-cols-2 gap-4">
 
-//                         {/* Sleek Close Button */}
-//                         <button
-//                             onClick={onClose}
-//                             className="text-[#71717a] hover:text-white p-2 rounded-full hover:bg-white/5 transition-all duration-300"
-//                         >
-//                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-//                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-//                             </svg>
-//                         </button>
+//                     <div>
+//                         <input
+//                             {...formik.getFieldProps("firstName")}
+//                             placeholder="First Name"
+//                             className={`input ${formik.touched.firstName && formik.errors.firstName ? "border-red-500" : ""}`}
+//                         />
+//                         {formik.touched.firstName && formik.errors.firstName && (
+//                             <p className="text-red-500 text-xs mt-1">{formik.errors.firstName}</p>
+//                         )}
 //                     </div>
 
-//                     {/*Form */}
-//                     <form onSubmit={formik.handleSubmit} className="space-y-6">
+//                     <div>
+//                         <input
+//                             {...formik.getFieldProps("lastName")}
+//                             placeholder="Last Name"
+//                             className={`input ${formik.touched.lastName && formik.errors.lastName ? "border-red-500" : ""}`}
+//                         />
+//                         {formik.touched.lastName && formik.errors.lastName && (
+//                             <p className="text-red-500 text-xs mt-1">{formik.errors.lastName}</p>
+//                         )}
+//                     </div>
 
-//                         {/* Row */}
-//                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//                             <div>
-//                                 <label className="block text-[10px] uppercase tracking-[0.2em] text-[#71717a] font-bold mb-2">First Name</label>
-//                                 <input
-//                                     {...formik.getFieldProps("firstName")}
-//                                     className="w-full bg-[#111111] border border-white/5 rounded-xl px-5 py-4 text-white text-base outline-none focus:border-white/40 focus:bg-[#151515] transition-all duration-300 placeholder:text-[#3f3f46]"
-//                                     placeholder="Enter first name"
-//                                 />
-//                                 {formik.touched.firstName && formik.errors.firstName && (
-//                                     <p className="text-[#ef4444] text-xs mt-2 font-medium tracking-wide">{formik.errors.firstName}</p>
-//                                 )}
-//                             </div>
-
-//                             <div>
-//                                 <label className="block text-[10px] uppercase tracking-[0.2em] text-[#71717a] font-bold mb-2">Last Name</label>
-//                                 <input
-//                                     {...formik.getFieldProps("lastName")}
-//                                     className="w-full bg-[#111111] border border-white/5 rounded-xl px-5 py-4 text-white text-base outline-none focus:border-white/40 focus:bg-[#151515] transition-all duration-300 placeholder:text-[#3f3f46]"
-//                                     placeholder="Enter last name"
-//                                 />
-//                                 {formik.touched.lastName && formik.errors.lastName && (
-//                                     <p className="text-[#ef4444] text-xs mt-2 font-medium tracking-wide">{formik.errors.lastName}</p>
-//                                 )}
-//                             </div>
-//                         </div>
-
-//                         {/* Username */}
-//                         <div>
-//                             <label className="block text-[10px] uppercase tracking-[0.2em] text-[#71717a] font-bold mb-2">Username</label>
-//                             <input
-//                                 {...formik.getFieldProps("username")}
-//                                 className="w-full bg-[#111111] border border-white/5 rounded-xl px-5 py-4 text-white text-base outline-none focus:border-white/40 focus:bg-[#151515] transition-all duration-300 placeholder:text-[#3f3f46]"
-//                                 placeholder="@username"
-//                             />
-//                             {formik.touched.username && formik.errors.username && (
-//                                 <p className="text-[#ef4444] text-xs mt-2 font-medium tracking-wide">{formik.errors.username}</p>
-//                             )}
-//                         </div>
-
-//                         {/* Email */}
-//                         <div>
-//                             <label className="block text-[10px] uppercase tracking-[0.2em] text-[#71717a] font-bold mb-2">Email</label>
-//                             <input
-//                                 {...formik.getFieldProps("email")}
-//                                 className="w-full bg-[#111111] border border-white/5 rounded-xl px-5 py-4 text-white text-base outline-none focus:border-white/40 focus:bg-[#151515] transition-all duration-300 placeholder:text-[#3f3f46]"
-//                                 placeholder="name@example.com"
-//                             />
-//                             {formik.touched.email && formik.errors.email && (
-//                                 <p className="text-[#ef4444] text-xs mt-2 font-medium tracking-wide">{formik.errors.email}</p>
-//                             )}
-//                         </div>
-
-//                         {/* Country */}
-//                         <div>
-//                             <label className="block text-[10px] uppercase tracking-[0.2em] text-[#71717a] font-bold mb-2">Country</label>
-//                             <input
-//                                 {...formik.getFieldProps("country")}
-//                                 className="w-full bg-[#111111] border border-white/5 rounded-xl px-5 py-4 text-white text-base outline-none focus:border-white/40 focus:bg-[#151515] transition-all duration-300 placeholder:text-[#3f3f46]"
-//                                 placeholder="Your country"
-//                             />
-//                             {formik.touched.country && formik.errors.country && (
-//                                 <p className="text-[#ef4444] text-xs mt-2 font-medium tracking-wide">{formik.errors.country}</p>
-//                             )}
-//                         </div>
-
-//                         {/* Bio */}
-//                         <div>
-//                             <label className="block text-[10px] uppercase tracking-[0.2em] text-[#71717a] font-bold mb-2">Bio</label>
-//                             <textarea
-//                                 rows={3}
-//                                 {...formik.getFieldProps("bio")}
-//                                 className="w-full bg-[#111111] border border-white/5 rounded-xl px-5 py-4 text-white text-base outline-none focus:border-white/40 focus:bg-[#151515] transition-all duration-300 resize-none placeholder:text-[#3f3f46]"
-//                                 placeholder="Tell us about yourself..."
-//                             />
-//                             {formik.touched.bio && formik.errors.bio && (
-//                                 <p className="text-[#ef4444] text-xs mt-2 font-medium tracking-wide">{formik.errors.bio}</p>
-//                             )}
-//                         </div>
-
-//                         {/*High-End Submit Button */}
-//                         <div className="pt-4">
-//                             <button
-//                                 type="submit"
-//                                 disabled={formik.isSubmitting}
-//                                 className="group w-full bg-white text-black py-4 rounded-full text-base font-semibold transition-all duration-300 hover:bg-gray-200 hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:hover:scale-100 flex justify-center items-center gap-3 cursor-pointer"
-//                             >
-//                                 <span>{formik.isSubmitting ? "Saving..." : "Save Changes"}</span>
-//                                 {!formik.isSubmitting && (
-//                                     <span className="group-hover:translate-x-1 transition-transform duration-300">
-//                                         →
-//                                     </span>
-//                                 )}
-//                             </button>
-//                         </div>
-
-//                     </form>
 //                 </div>
-//             </div>
-//         </>
-//     );
-// };
 
-// export default EditProfileModal;
+//                 {/* USERNAME */}
+//                 <div>
+//                     <input
+//                         {...formik.getFieldProps("username")}
+//                         placeholder="Username"
+//                         className={`input ${formik.touched.username && formik.errors.username ? "border-red-500" : ""}`}
+//                     />
+//                     {formik.touched.username && formik.errors.username && (
+//                         <p className="text-red-500 text-xs mt-1">{formik.errors.username}</p>
+//                     )}
+//                 </div>
+
+//                 {/* EMAIL */}
+//                 <div>
+//                     <input
+//                         {...formik.getFieldProps("email")}
+//                         placeholder="Email"
+//                         className={`input ${formik.touched.email && formik.errors.email ? "border-red-500" : ""}`}
+//                     />
+//                     {formik.touched.email && formik.errors.email && (
+//                         <p className="text-red-500 text-xs mt-1">{formik.errors.email}</p>
+//                     )}
+//                 </div>
+
+//                 {/* GENDER */}
+//                 <div>
+//                     <select
+//                         {...formik.getFieldProps("gender")}
+//                         className={`input ${formik.touched.gender && formik.errors.gender ? "border-red-500" : ""}`}
+//                     >
+//                         <option value="">Select Gender</option>
+//                         <option value="Male">Male</option>
+//                         <option value="Female">Female</option>
+//                         <option value="Other">Other</option>
+//                     </select>
+
+//                     {formik.touched.gender && formik.errors.gender && (
+//                         <p className="text-red-500 text-xs mt-1">{formik.errors.gender}</p>
+//                     )}
+//                 </div>
+
+//                 {/* DOB */}
+//                 <div>
+//                     <input
+//                         type="date"
+//                         max={new Date().toISOString().split("T")[0]} // 🚀 future date block
+//                         {...formik.getFieldProps("dob")}
+//                         className={`input ${formik.touched.dob && formik.errors.dob ? "border-red-500" : ""}`}
+//                     />
+
+//                     {formik.touched.dob && formik.errors.dob && (
+//                         <p className="text-red-500 text-xs mt-1">{formik.errors.dob}</p>
+//                     )}
+//                 </div>
+
+//                 {/* COUNTRY (FIXED UI) */}
+//                 <div>
+//                     <Select
+//                         options={countryOptions}
+//                         value={countryOptions.find(c => c.label === formik.values.country)}
+//                         onChange={(val) => {
+//                             formik.setFieldValue("country", val.label);
+//                             formik.setFieldTouched("country", true);
+//                         }}
+//                         styles={{
+//                             control: (base, state) => ({
+//                                 ...base,
+//                                 backgroundColor: "#111",
+//                                 borderColor:
+//                                     formik.touched.country && formik.errors.country
+//                                         ? "red"
+//                                         : "#333",
+//                                 borderRadius: "10px",
+//                                 padding: "4px",
+//                                 color: "white",
+//                                 boxShadow: "none",
+//                             }),
+//                             menu: (base) => ({
+//                                 ...base,
+//                                 backgroundColor: "#111",
+//                                 color: "white",
+//                             }),
+//                             option: (base, state) => ({
+//                                 ...base,
+//                                 backgroundColor: state.isFocused ? "#222" : "#111",
+//                                 color: "white",
+//                                 cursor: "pointer",
+//                             }),
+//                             singleValue: (base) => ({
+//                                 ...base,
+//                                 color: "white",
+//                             }),
+//                         }}
+//                     />
+
+//                     {formik.touched.country && formik.errors.country && (
+//                         <p className="text-red-500 text-xs mt-1">{formik.errors.country}</p>
+//                     )}
+//                 </div>
+
+//                 {/* BIO */}
+//                 <div>
+//                     <textarea
+//                         {...formik.getFieldProps("bio")}
+//                         rows={3}
+//                         placeholder="Bio"
+//                         className={`input ${formik.touched.bio && formik.errors.bio ? "border-red-500" : ""}`}
+//                     />
+
+//                     {formik.touched.bio && formik.errors.bio && (
+//                         <p className="text-red-500 text-xs mt-1">{formik.errors.bio}</p>
+//                     )}
+//                 </div>
+
+//                 {/* BUTTON */}
+//                 <button
+//                     type="submit"
+//                     disabled={!formik.isValid || formik.isSubmitting}
+//                     className={`w-full py-3 rounded-full font-semibold transition ${!formik.isValid
+//                         ? "bg-gray-600 cursor-not-allowed"
+//                         : "bg-white text-black hover:scale-105"
+//                         }`}
+//                 >
+//                     {formik.isSubmitting ? "Saving..." : "Save Changes"}
+//                 </button>
+
+//             </form>
+
+
+//         </div>
+//     </div>
+// );

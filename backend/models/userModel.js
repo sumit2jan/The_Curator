@@ -26,15 +26,17 @@ const UserSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: true,
       minlength: 8,
       maxlength: 128,
-      select: false
+      select: false,
+      required: function () {
+        return this.authProvider === "local";f
+      }
     },
 
     isVerified: {
       type: Boolean,
-      default: false, // ✅ after OTP verification user create ho raha hai
+      default: false, // after OTP verification user create ho raha hai
     },
 
     role: {
@@ -43,6 +45,34 @@ const UserSchema = new mongoose.Schema(
       default: "user",
     },
 
+    profileVisibility: {
+      type: String,
+      enum: ["public", "private"],
+      default: "public"
+    },
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local"
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+    refreshTokens: [
+      {
+        token: { type: String, required: true },
+        deviceInfo: { type: String, default: "Unknown Device" },
+        ipAddress: { type: String, default: null },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+          expires: 60 * 60 * 24 * 30,
+        },
+      },
+    ],
+
     followersCount: { type: Number, default: 0 },
     followingCount: { type: Number, default: 0 },
     subscribersCount: { type: Number, default: 0 },
@@ -50,6 +80,33 @@ const UserSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+UserSchema.methods.addRefreshToken = function (token, deviceInfo, ipAddress) {
+  if (this.refreshTokens.length >= 5) {
+    this.refreshTokens.shift(); // evict oldest if over device limit
+  }
+  this.refreshTokens.push({ token, deviceInfo, ipAddress });
+  return this.save();
+};
+
+UserSchema.methods.removeAllRefreshTokens = function () {
+  this.refreshTokens = [];
+  return this.save();
+};
+
+UserSchema.methods.hasRefreshToken = function (token) {
+  return this.refreshTokens.some((t) => t.token === token);
+};
+
+UserSchema.set("toJSON", {
+  virtuals: true,
+  transform: function (doc, ret) {
+    delete ret.password;
+    delete ret.refreshTokens; // never expose sessions
+    delete ret.googleId;
+  },
+});
+
 
 
 module.exports = mongoose.model("User", UserSchema);

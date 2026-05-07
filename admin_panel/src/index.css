@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+:root {
+  /* 🔥 BASE */
+  --color-primary: #000000;
+
+  /* 🔥 SURFACES (cards, sections) */
+  --color-surface: #111111;
+  --color-soft: #1a1a1a;
+
+  /* 🔥 TEXT */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+
+  /* 🔥 ACCENT (use rarely) */
+  --color-accent: #00d4ff;
+}
+
+@keyframes scrollUp {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes scrollDown {
+  0% {
+    transform: translateY(-50%);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-scrollUp {
+  animation: scrollUp 10s linear infinite;
+}
+
+.animate-scrollDown {
+  animation: scrollDown 10s linear infinite;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-primary);
+  color: var(--color-text-primary);
+  font-family: 'Inter', sans-serif;
+}
+
+.Toastify__toast {
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.input {
+  width: 100%;
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px;
+  color: white;
+  outline: none;
+}
+
+/* tip tap css starts from here */
+
+.ProseMirror {
+  outline: none;
+}
+
+.ProseMirror h1 {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.ProseMirror h2 {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 20px;
+}
+
+.ProseMirror p {
+  margin: 8px 0;
+}
+
+.swal2-popup {
+  backdrop-filter: blur(10px);
+}
+
+
+/* blogs home page ki ui  */
+
+.blog-feed {
+  padding: 20px;
+}
+
+.search-section {
+  margin-bottom: 20px;
+}
+
+.category-section {
+  margin-bottom: 20px;
+}
+
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.load-more {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

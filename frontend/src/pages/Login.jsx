@@ -9,6 +9,7 @@ import { authSelector } from "../redux/auth/authSelectors";
 import ForgotPasswordModal from "../modals/ForgotPasswordModal";
 import LoginVerifyModal from "../modals/LoginOtpModal";
 import loginImage from "../assets/Login/loginImage.jpg";
+import GoogleButton from "../components/google";
 
 const Login = () => {
     const dispatch = useDispatch();
@@ -203,7 +204,7 @@ const Login = () => {
                             Create new password
                         </span>
                     </p>
-
+                    <GoogleButton />
                 </div>
 
                 <ForgotPasswordModal

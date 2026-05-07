@@ -4,6 +4,7 @@ import { loginThunk } from "./authThunk";
 const initialState = {
   user: null,
   token: null,
+  refreshToken: null,
   loading: false,
   error: null,
 };
@@ -15,8 +16,16 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.token = null;
+      state.refreshToken = null;
       state.error = null;
       state.loading = false;
+    },
+    googleLogin: (state, action) => {
+      state.token = action.payload.token;
+      state.refreshToken = action.payload.refreshToken;
+      state.user = action.payload.user || null;
+      state.loading = false;
+      state.error = null;
     },
   },
 
@@ -34,6 +43,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        state.refreshToken = action.payload.refreshToken;
       })
 
       // error
@@ -44,5 +54,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout } = authSlice.actions;
+export const { logout, googleLogin } = authSlice.actions;
 export default authSlice.reducer;

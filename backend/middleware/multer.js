@@ -16,7 +16,7 @@ if (!fs.existsSync(TEMP_DIR)) {
 // Storage config (NO TYPE LOGIC HERE)
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, TEMP_DIR); // always temp
+    cb(null, TEMP_DIR); //  always temp
   },
 
   filename: function (req, file, cb) {

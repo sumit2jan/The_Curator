@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 
 const connectDB = require("./config/db");
+const passport = require("./config/passport");
 
 const app = express();
 
@@ -17,9 +18,9 @@ app.use("/uploads", express.static("uploads"));
 
 // DB
 connectDB();
-
+app.use(passport.initialize())
 // Routes
-app.use("/blog", require("./routes"));
+app.use("/thecurator", require("./routes"));
 
 // Test route
 app.get("/", (req, res) => {

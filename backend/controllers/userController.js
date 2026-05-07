@@ -13,9 +13,10 @@ const getAllUsers = async (req, res) => {
         const search = req.query.search?.trim() || "";
         const gender = req.query.gender || "";
         const country = req.query.country || "";
+        const isVerified = req.query.isVerified;
 
         const sortBy = req.query.sortBy || "createdAt";
-        const order = req.query.order === "asc" ? 1 : -1; // ascending or decending in order  
+        const order = req.query.order === "asc" ? 1 : -1;
 
         const skip = (page - 1) * limit;
 
@@ -23,85 +24,16 @@ const getAllUsers = async (req, res) => {
             role: "user",
         };
 
-        const pipeline = [
-            { $match: baseMatch },
-
-            {
-                $lookup: {
-                    from: "userdetails", // ✅ fixed
-                    localField: "_id",
-                    foreignField: "userId",
-                    as: "detail",
-                },
-            },
-            {
-                $unwind: {
-                    path: "$detail",
-                    preserveNullAndEmptyArrays: true,
-                },
-            },
-        ];
-
-        // SEARCH 
-        if (search) {
-            pipeline.push({
-                $match: {
-                    $or: [
-                        { email: { $regex: search, $options: "i" } },
-                        { username: { $regex: search, $options: "i" } },
-                        { "detail.firstName": { $regex: search, $options: "i" } },
-                        { "detail.lastName": { $regex: search, $options: "i" } },
-                    ],
-                },
-            });
+        if (isVerified !== undefined) {
+            baseMatch.isVerified = isVerified === "true";
         }
 
-        // FILTER
-        if (gender) {
-            pipeline.push({ $match: { "detail.gender": gender } });
-        }
-
-        if (country) {
-            pipeline.push({ $match: { "detail.country": country } });
-        }
-
-        // SORT
         const allowedSortFields = ["createdAt", "email", "username"];
         const sortField = allowedSortFields.includes(sortBy)
             ? sortBy
             : "createdAt";
 
-        pipeline.push({
-            $sort: { [sortField]: order },
-        });
-
-        // PROJECT 
-        pipeline.push({
-            $project: {
-                _id: 1,
-                email: 1,
-                username: 1,
-                isVerified: 1,
-                createdAt: 1,
-
-                firstName: "$detail.firstName",
-                lastName: "$detail.lastName",
-                gender: "$detail.gender",
-                country: "$detail.country",
-                bio: "$detail.bio",
-                profilePic: "$detail.profilePic",
-                dob: "$detail.dob",
-            },
-        });
-
-        // PAGINATION 
-        pipeline.push({ $skip: skip });
-        pipeline.push({ $limit: limit });
-
-        const users = await User.aggregate(pipeline);
-
-        // TOTAL COUNT 
-        const totalPipeline = [
+        const pipeline = [
             { $match: baseMatch },
 
             {
@@ -118,35 +50,66 @@ const getAllUsers = async (req, res) => {
                     preserveNullAndEmptyArrays: true,
                 },
             },
+
+            // SEARCH
+            ...(search
+                ? [
+                    {
+                        $match: {
+                            $or: [
+                                { email: { $regex: search, $options: "i" } },
+                                { username: { $regex: search, $options: "i" } },
+                                { "detail.firstName": { $regex: search, $options: "i" } },
+                                { "detail.lastName": { $regex: search, $options: "i" } },
+                            ],
+                        },
+                    },
+                ]
+                : []),
+
+            // FILTERS
+            ...(gender ? [{ $match: { "detail.gender": gender } }] : []),
+            ...(country ? [{ $match: { "detail.country": country } }] : []),
+
+            {
+                $facet: {
+                    data: [
+                        { $sort: { [sortField]: order } },
+
+                        {
+                            $project: {
+                                _id: 1,
+                                email: 1,
+                                username: 1,
+                                isVerified: 1,
+                                profileVisibility: 1,
+                                createdAt: 1,
+
+                                firstName: "$detail.firstName",
+                                lastName: "$detail.lastName",
+                                gender: "$detail.gender",
+                                country: "$detail.country",
+                                bio: "$detail.bio",
+                                profilePic: "$detail.profilePic",
+                                cover: "$detail.cover",
+                                dob: "$detail.dob",
+                            },
+                        },
+
+                        { $skip: skip },
+                        { $limit: limit },
+                    ],
+
+                    totalCount: [{ $count: "total" }],
+                },
+            },
         ];
 
-        if (search) {
-            totalPipeline.push({
-                $match: {
-                    $or: [
-                        { email: { $regex: search, $options: "i" } },
-                        { username: { $regex: search, $options: "i" } },
-                        { "detail.firstName": { $regex: search, $options: "i" } },
-                        { "detail.lastName": { $regex: search, $options: "i" } },
-                    ],
-                },
-            });
-        }
+        const result = await User.aggregate(pipeline);
 
-        if (gender) {
-            totalPipeline.push({ $match: { "detail.gender": gender } });
-        }
+        const users = result[0].data;
+        const totalUsers = result[0].totalCount[0]?.total || 0;
 
-        if (country) {
-            totalPipeline.push({ $match: { "detail.country": country } });
-        }
-
-        totalPipeline.push({ $count: "total" });
-
-        const totalResult = await User.aggregate(totalPipeline);
-        const totalUsers = totalResult[0]?.total || 0;
-
-        // RESPONSE  
         return res.status(200).json({
             success: true,
             message: users.length ? "Users fetched" : "No users found",
@@ -167,6 +130,168 @@ const getAllUsers = async (req, res) => {
         });
     }
 };
+// const getAllUsers = async (req, res) => {
+//     try {
+//         let page = Math.max(parseInt(req.query.page) || 1, 1);
+//         let limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
+
+//         const search = req.query.search?.trim() || "";
+//         const gender = req.query.gender || "";
+//         const country = req.query.country || "";
+
+//         const sortBy = req.query.sortBy || "createdAt";
+//         const order = req.query.order === "asc" ? 1 : -1; // ascending or decending in order  
+
+//         const skip = (page - 1) * limit;
+
+//         const baseMatch = {
+//             role: "user",
+//         };
+
+//         const pipeline = [
+//             { $match: baseMatch },
+
+//             {
+//                 $lookup: {
+//                     from: "userdetails", // ✅ fixed
+//                     localField: "_id",
+//                     foreignField: "userId",
+//                     as: "detail",
+//                 },
+//             },
+//             {
+//                 $unwind: {
+//                     path: "$detail",
+//                     preserveNullAndEmptyArrays: true,
+//                 },
+//             },
+//         ];
+
+//         // SEARCH 
+//         if (search) {
+//             pipeline.push({
+//                 $match: {
+//                     $or: [
+//                         { email: { $regex: search, $options: "i" } },
+//                         { username: { $regex: search, $options: "i" } },
+//                         { "detail.firstName": { $regex: search, $options: "i" } },
+//                         { "detail.lastName": { $regex: search, $options: "i" } },
+//                     ],
+//                 },
+//             });
+//         }
+
+//         // FILTER
+//         if (gender) {
+//             pipeline.push({ $match: { "detail.gender": gender } });
+//         }
+
+//         if (country) {
+//             pipeline.push({ $match: { "detail.country": country } });
+//         }
+
+//         // SORT
+//         const allowedSortFields = ["createdAt", "email", "username"];
+//         const sortField = allowedSortFields.includes(sortBy)
+//             ? sortBy
+//             : "createdAt";
+
+//         pipeline.push({
+//             $sort: { [sortField]: order },
+//         });
+
+//         // PROJECT 
+//         pipeline.push({
+//             $project: {
+//                 _id: 1,
+//                 email: 1,
+//                 username: 1,
+//                 isVerified: 1,
+//                 createdAt: 1,
+
+//                 firstName: "$detail.firstName",
+//                 lastName: "$detail.lastName",
+//                 gender: "$detail.gender",
+//                 country: "$detail.country",
+//                 bio: "$detail.bio",
+//                 profilePic: "$detail.profilePic",
+//                 dob: "$detail.dob",
+//             },
+//         });
+
+//         // PAGINATION 
+//         pipeline.push({ $skip: skip });
+//         pipeline.push({ $limit: limit });
+
+//         const users = await User.aggregate(pipeline);
+
+//         // TOTAL COUNT 
+//         const totalPipeline = [
+//             { $match: baseMatch },
+
+//             {
+//                 $lookup: {
+//                     from: "userdetails",
+//                     localField: "_id",
+//                     foreignField: "userId",
+//                     as: "detail",
+//                 },
+//             },
+//             {
+//                 $unwind: {
+//                     path: "$detail",
+//                     preserveNullAndEmptyArrays: true,
+//                 },
+//             },
+//         ];
+
+//         if (search) {
+//             totalPipeline.push({
+//                 $match: {
+//                     $or: [
+//                         { email: { $regex: search, $options: "i" } },
+//                         { username: { $regex: search, $options: "i" } },
+//                         { "detail.firstName": { $regex: search, $options: "i" } },
+//                         { "detail.lastName": { $regex: search, $options: "i" } },
+//                     ],
+//                 },
+//             });
+//         }
+
+//         if (gender) {
+//             totalPipeline.push({ $match: { "detail.gender": gender } });
+//         }
+
+//         if (country) {
+//             totalPipeline.push({ $match: { "detail.country": country } });
+//         }
+
+//         totalPipeline.push({ $count: "total" });
+
+//         const totalResult = await User.aggregate(totalPipeline);
+//         const totalUsers = totalResult[0]?.total || 0;
+
+//         // RESPONSE  
+//         return res.status(200).json({
+//             success: true,
+//             message: users.length ? "Users fetched" : "No users found",
+//             data: users,
+//             pagination: {
+//                 currentPage: page,
+//                 totalPages: Math.ceil(totalUsers / limit),
+//                 totalUsers,
+//                 limit,
+//             },
+//         });
+//     } catch (error) {
+//         console.error("Dashboard Error:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Error fetching users",
+//             error: error.message,
+//         });
+//     }
+// };
 
 // update
 const updateUser = async (req, res) => {
@@ -203,6 +328,7 @@ const updateUser = async (req, res) => {
             email,
             username,
             isVerified,
+            profileVisibility,
             firstName,
             lastName,
             gender,
@@ -223,7 +349,8 @@ const updateUser = async (req, res) => {
             if (existingEmail) {
                 return res.status(400).json({
                     success: false,
-                    message: "Email already exists"
+                    message: "Email already exists",
+                    data: null
                 });
             }
 
@@ -238,7 +365,8 @@ const updateUser = async (req, res) => {
             if (existingUsername) {
                 return res.status(400).json({
                     success: false,
-                    message: "Username already exists"
+                    message: "Username already exists",
+                    data: null
                 });
             }
             userUpdate.username = username;
@@ -250,6 +378,11 @@ const updateUser = async (req, res) => {
             userUpdate.isVerified = isVerified;
         }
 
+        // for user profile visibility
+        if (profileVisibility !== undefined) {
+            userUpdate.profileVisibility = profileVisibility;
+        }
+
         if (firstName !== undefined) detailUpdate.firstName = firstName;
         if (lastName !== undefined) detailUpdate.lastName = lastName;
         if (gender !== undefined) detailUpdate.gender = gender;
@@ -257,6 +390,7 @@ const updateUser = async (req, res) => {
         if (bio !== undefined) detailUpdate.bio = bio;
         if (dob !== undefined) detailUpdate.dob = dob;
 
+        
 
         // check if the fields are upadted or not 
         if (
@@ -265,7 +399,8 @@ const updateUser = async (req, res) => {
         ) {
             return res.status(400).json({
                 success: false,
-                message: "No data provided to update"
+                message: "No data provided to update",
+                data: null
             });
         }
 
@@ -442,28 +577,37 @@ const toggleVerify = async (req, res) => {
 //profile 
 const getUserProfile = async (req, res) => {
     try {
-        const paramId = req.params.id; // 👈 optional
-        const loggedInId = req.user._id.toString();
+        const paramId = req.params.id;
+        const loggedInUser = req.user;
+        const loggedInId = loggedInUser._id.toString();
 
-        // Decide which ID to use
-        let targetUserId;
+        let targetUserId = paramId || loggedInId;
 
-        if (paramId) {
-            // Authorization check
-            if (req.user.role !== "admin" && paramId !== loggedInId) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Unauthorized",
-                    data: null
-                });
-            }
+        // STEP 1: Get target user's visibility
+        const targetUser = await User.findById(targetUserId).select("profileVisibility");
 
-            targetUserId = paramId;
-        } else {
-            // If no param → own profile
-            targetUserId = loggedInId;
+        if (!targetUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+                data: null
+            });
         }
 
+        // STEP 2: Authorization check
+        const isOwner = targetUserId === loggedInId;
+        const isAdmin = loggedInUser.role === "admin";
+        const isPublic = targetUser.profileVisibility === "public";
+
+        if (!isPublic && !isOwner && !isAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: "This profile is private",
+                data: null
+            });
+        }
+
+        // STEP 3: Aggregation
         const userId = new mongoose.Types.ObjectId(targetUserId);
 
         const result = await User.aggregate([
@@ -536,18 +680,115 @@ const getUserProfile = async (req, res) => {
         });
     }
 };
+// const getUserProfile = async (req, res) => {
+//     try {
+//         const paramId = req.params.id; // optional
+//         const loggedInId = req.user._id.toString();
+
+//         // Decide which ID to use
+//         let targetUserId;
+
+//         if (paramId) {
+//             // Authorization check
+//             if (req.user.role !== "admin" && paramId !== loggedInId && req.user.profileVisibility == private) {
+//                 return res.status(403).json({
+//                     success: false,
+//                     message: "Unauthorized",
+//                     data: null
+//                 });
+//             }
+
+//             targetUserId = paramId;
+//         } else {
+//             // If no param → own profile
+//             targetUserId = loggedInId;
+//         }
+
+//         const userId = new mongoose.Types.ObjectId(targetUserId);
+
+//         const result = await User.aggregate([
+//             {
+//                 $match: { _id: userId }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "userdetails",
+//                     localField: "_id",
+//                     foreignField: "userId",
+//                     as: "details"
+//                 }
+//             },
+//             {
+//                 $unwind: {
+//                     path: "$details",
+//                     preserveNullAndEmptyArrays: true
+//                 }
+//             },
+//             {
+//                 $project: {
+//                     password: 0,
+//                     __v: 0,
+//                     "details.__v": 0,
+//                     "details.userId": 0
+//                 }
+//             },
+//             {
+//                 $addFields: {
+//                     firstName: "$details.firstName",
+//                     lastName: "$details.lastName",
+//                     gender: "$details.gender",
+//                     country: "$details.country",
+//                     bio: "$details.bio",
+//                     dob: "$details.dob",
+//                     profilePic: "$details.profilePic",
+//                     cover: "$details.cover",
+//                     detailId: "$details._id"
+//                 }
+//             },
+//             {
+//                 $project: {
+//                     details: 0
+//                 }
+//             }
+//         ]);
+
+//         if (!result.length) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "User not found",
+//                 data: null
+//             });
+//         }
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Profile fetched successfully",
+//             data: result[0]
+//         });
+
+//     } catch (error) {
+//         console.log("Get Profile Error:", error);
+
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server error",
+//             data: null
+//         });
+//     }
+// };
 
 // profile pic update krne ke liye 
 const uploadProfilePic = async (req, res) => {
     try {
         const userId = req.user.id;
         const file = req.file;
-
+        console.log(" req.file;")
         // No file
         if (!file) {
             return res.status(400).json({
                 success: false,
                 message: "No file uploaded",
+                data: null
             });
         }
 
@@ -558,6 +799,7 @@ const uploadProfilePic = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: "User not found",
+                data: null
             });
         }
 
@@ -601,51 +843,11 @@ const uploadProfilePic = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Failed to upload profile picture",
+            data: null
         });
     }
 };
-// const uploadProfilePic = async (req, res) => {
-//     try {
-//         //console.log("yeh hit hogya hai")
-//         const userId = req.user.id; // auth middleware se aayega
-//         const file = req.file;
-
-//         // Validation
-//         if (!file) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "No file uploaded",
-//             });
-//         }
-
-//         // uploadMedia expects array → so wrap in []
-//         const uploaded = await uploadMedia([file], "profile");
-
-//         const imageUrl = uploaded[0]; // single file    
-
-//         // Update UserDetail
-//         const updatedUser = await UserDetail.findOneAndUpdate(
-//             { userId },
-//             { profilePic: imageUrl },
-//             { new: true }
-//         );
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "Profile picture updated successfully",
-//             data: updatedUser,
-//         });
-//     } catch (error) {
-//         console.error("Profile upload error:", error);
-
-//         return res.status(500).json({
-//             success: false,
-//             message: "Failed to upload profile picture",
-//         });
-//     }
-// };
-
-
+// cover pic update krne ke liye
 const uploadCoverPic = async (req, res) => { // upload cover ke liye 
     try {
         const userId = req.user.id;
@@ -667,6 +869,10 @@ const uploadCoverPic = async (req, res) => { // upload cover ke liye
                 success: false,
                 message: "User not found",
             });
+        }
+
+        if (!userDetail) {
+            userDetail = await UserDetail.create({ userId });
         }
 
         const oldPublicId = userDetail.cover?.public_id;
@@ -712,6 +918,7 @@ const uploadCoverPic = async (req, res) => { // upload cover ke liye
         });
     }
 };
+
 
 
 module.exports = { getAllUsers, updateUser, deleteUser, toggleVerify, getUserProfile, uploadProfilePic, uploadCoverPic };

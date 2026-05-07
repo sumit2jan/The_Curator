@@ -1,0 +1,265 @@
+/* Smooth transition */
+.nav-link {
+  color: #212529 !important;
+  margin-left: 20px;
+  position: relative;
+  transition: 0.3s ease;
+}
+
+/* Hover */
+.nav-link:hover {
+  color: #dc3545 !important;
+}
+
+/* Active underline animation 🔥 */
+.active-link::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background-color: #dc3545;
+  bottom: -5px;
+  left: 0;
+  animation: slide 0.3s ease-in-out;
+}
+
+/* User badge */
+.user-badge {
+  background: #f8f9fa;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 500;
+  color: #212529;
+  border: 1px solid #eee;
+  transition: 0.3s;
+}
+
+/* Hover effect 🔥 */
+.user-badge:hover {
+  background: #dc3545;
+  color: #fff;
+  border-color: #dc3545;
+}
+
+@keyframes slide {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* Logout button hover */
+.btn-danger {
+  transition: 0.3s;
+}
+
+.btn-danger:hover {
+  background-color: #bb2d3b !important;
+}
+
+
+/* Home page css */
+
+/* Background */
+.home-container {
+  height: 90vh;
+  background-color: #f8f9fa;
+}
+
+/* Heading */
+.home-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #212529;
+}
+
+/* Subtitle */
+.home-subtitle {
+  color: #6c757d;
+  margin-top: 15px;
+  line-height: 1.6;
+}
+
+/* Right side visual box */
+.home-box {
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(135deg, #dc3545, #ff6b6b);
+  border-radius: 20px;
+  margin: auto;
+  box-shadow: 0 10px 30px rgba(220, 53, 69, 0.3);
+}
+
+
+
+/* Sign Up page Css*/
+
+/* Container */
+.signup-container {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f8f9fa;
+}
+
+/* Card */
+.signup-card {
+    width: 400px;
+    padding: 30px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Heading */
+.signup-heading {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.signup-heading span {
+    color: #dc3545; /* red accent */
+}
+
+/* Form */
+.signup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Inputs */
+.signup-form input,
+.signup-form select {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    outline: none;
+    transition: 0.3s;
+}
+
+/* Focus Effect 🔥 */
+.signup-form input:focus,
+.signup-form select:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 5px rgba(220, 53, 69, 0.3);
+}
+
+/* Button */
+.signup-form button {
+    margin-top: 10px;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    background: #dc3545;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* Hover effect 🔥 */
+.signup-form button:hover {
+    background: #bb2d3b;
+}
+
+/* Error */
+.error {
+    color: red;
+    font-size: 12px;
+    margin: 0;
+}
+
+/* Login page Css */
+
+.login-container {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f8f9fa;
+}
+
+.login-card {
+    width: 350px;
+    padding: 30px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.login-heading {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.login-heading span {
+    color: #dc3545;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.login-form input {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    outline: none;
+    transition: 0.3s;
+}
+
+.login-form input:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 5px rgba(220, 53, 69, 0.3);
+}
+
+.login-form button {
+    margin-top: 10px;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    background: #dc3545;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.login-form button:hover {
+    background: #bb2d3b;
+}
+
+.login-form button:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+}
+
+.error {
+    color: red;
+    font-size: 12px;
+    margin: 0;
+}
+
+body {
+  background-color: #f8f9fa;
+}
+
+h2 span {
+  color: #dc3545;
+}
+
+input.form-control {
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.rdt_Table {
+  border-radius: 10px;
+  overflow: hidden;
+}

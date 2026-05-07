@@ -1,9 +1,11 @@
-const jwt = require("jsonwebtoken");
+//const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 
+const { generateAccessToken, verifyAccesToken } = require("../utils/jwt");
 
 // abhi hum manualy bhejte hai postman pe 
 const authMiddleware = async (req, res, next) => {
+
     try {
         let token;
 
@@ -14,7 +16,6 @@ const authMiddleware = async (req, res, next) => {
         ) {
             token = req.headers.authorization.split(" ")[1];
         }
-
         // No token
         if (!token) {
             return res.status(401).json({
@@ -26,7 +27,7 @@ const authMiddleware = async (req, res, next) => {
         }
 
         // Verify token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = verifyAccesToken(token);
 
         // Find user
         const user = await User.findById(decoded.id);
