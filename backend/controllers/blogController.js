@@ -980,17 +980,38 @@ const getBlogById = async (req, res) => {
             });
         }
 
-        //  Views (optimized)
+        // Views (optimized)
         if (!isOwner && !isAdmin) {
             await Blog.findByIdAndUpdate(blogId, {
                 $inc: { views: 1 }
             });
         }
 
+        // TRANSFORM BLOG RESPONSE
+
+        // CHECK CURRENT USER LIKED OR NOT
+        const likedByCurrentUser = blog.likes.some(
+            (id) => id.toString() === user?._id?.toString()
+        );
+
+        const transformedBlog = {
+
+            // ALL EXISTING BLOG DATA
+            ...blog.toObject(),
+
+            // TOTAL LIKE COUNT
+            totalLikes: blog.likes.length,
+
+            // USER LIKE STATUS
+            likedByCurrentUser
+        };
+
         return res.status(200).json({
             success: true,
             message: "Blog fetched successfully",
-            data: blog
+
+            // CHANGED FROM blog -> transformedBlog
+            data: transformedBlog
         });
 
     } catch (error) {
@@ -1003,9 +1024,78 @@ const getBlogById = async (req, res) => {
         });
     }
 };
+// const getBlogById = async (req, res) => {
+//     try {
+//         const blogId = req.params.id;
+//         const user = req.user;
+
+//         const blog = await Blog.findById(blogId)
+//             .populate("author", "username email")
+//             .populate("category", "name slug");
+
+//         if (!blog) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Blog not found",
+//                 data: null
+//             });
+//         }
+
+//         const isOwner = blog.author._id.toString() === user._id.toString();
+//         const isAdmin = user.role === "admin";
+
+//         // Deleted
+//         if (blog.isDeleted && !isAdmin) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Blog not found",
+//                 data: null
+//             });
+//         }
+
+//         // Blocked
+//         if (blog.isBlocked && !isAdmin) {
+//             return res.status(403).json({
+//                 success: false,
+//                 message: "This blog is blocked",
+//                 data: null
+//             });
+//         }
+
+//         // Private
+//         if (blog.visibility === "private" && !isOwner && !isAdmin) {
+//             return res.status(403).json({
+//                 success: false,
+//                 message: "This blog is private",
+//                 data: null
+//             });
+//         }
+
+//         //  Views (optimized)
+//         if (!isOwner && !isAdmin) {
+//             await Blog.findByIdAndUpdate(blogId, {
+//                 $inc: { views: 1 }
+//             });
+//         }
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Blog fetched successfully",
+//             data: blog
+//         });
+
+//     } catch (error) {
+//         console.error("Get Blog Error:", error);
+
+//         return res.status(500).json({
+//             success: false,
+//             message: "Error fetching blog",
+//             data: null
+//         });
+//     }
+// };
 
 // get blog by slug
-
 const getBlogBySlug = async (req, res) => {
     try {
         const { slug } = req.params;
@@ -1063,10 +1153,37 @@ const getBlogBySlug = async (req, res) => {
             );
         }
 
+
+        // =========================
+        // TRANSFORM BLOG RESPONSE
+        // =========================
+
+        // CHECK CURRENT USER LIKED OR NOT
+        const likedByCurrentUser = blog.likes.some(
+            (id) => id.toString() === user?._id?.toString()
+        );
+
+        const transformedBlog = {
+
+            // ALL EXISTING BLOG DATA
+            ...blog,
+
+            // TOTAL LIKE COUNT
+            totalLikes: blog.likes.length,
+
+            // USER LIKE STATUS
+            likedByCurrentUser,
+
+            // HIDE RAW LIKES ARRAY
+            likes: undefined
+        };
+
         return res.status(200).json({
             success: true,
             message: "Blog fetched successfully",
-            data: blog
+
+            // CHANGED FROM blog -> transformedBlog
+            data: transformedBlog
         });
 
     } catch (error) {
@@ -1079,6 +1196,79 @@ const getBlogBySlug = async (req, res) => {
         });
     }
 };
+// const getBlogBySlug = async (req, res) => {
+//     try {
+//         const { slug } = req.params;
+//         const user = req.user;
+
+//         // 🔹 Find blog by slug
+//         const blog = await Blog.findOne({ slug })
+//             .populate("author", "username email profilePic")
+//             .populate("category", "name slug")
+//             .lean();
+
+//         if (!blog) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Blog not found",
+//                 data: null
+//             });
+//         }
+
+//         const isOwner = user && blog.author._id.toString() === user._id.toString();
+//         const isAdmin = user && user.role === "admin";
+
+//         // Deleted check
+//         if (blog.isDeleted && !isAdmin) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Blog not found",
+//                 data: null
+//             });
+//         }
+
+//         // Blocked check
+//         if (blog.isBlocked && !isAdmin) {
+//             return res.status(403).json({
+//                 success: false,
+//                 message: "This blog is blocked",
+//                 data: null
+//             });
+//         }
+
+//         // 🔹 Private check
+//         if (blog.visibility === "private" && !isOwner && !isAdmin) {
+//             return res.status(403).json({
+//                 success: false,
+//                 message: "This blog is private",
+//                 data: null
+//             });
+//         }
+
+//         // Views increment (only for public viewers)
+//         if (!isOwner && !isAdmin) {
+//             await Blog.updateOne(
+//                 { _id: blog._id },
+//                 { $inc: { views: 1 } }
+//             );
+//         }
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Blog fetched successfully",
+//             data: blog
+//         });
+
+//     } catch (error) {
+//         console.error("Get Blog By Slug Error:", error);
+
+//         return res.status(500).json({
+//             success: false,
+//             message: "Error fetching blog",
+//             data: null
+//         });
+//     }
+// };
 
 
 // get all blogs 
@@ -1143,7 +1333,7 @@ const getAllBlogs = async (req, res) => {
 
         // CATEGORY FILTER (MULTIPLE)
         if (category) {
-            //console.log("Category Query:", category);
+
             const categories = category
                 .split(",")
                 .map(id => id.trim())
@@ -1170,6 +1360,7 @@ const getAllBlogs = async (req, res) => {
 
         // SORTING
         let sortOption = {};
+
         if (sort === "popular") {
             sortOption = { views: -1 };
         } else {
@@ -1185,12 +1376,39 @@ const getAllBlogs = async (req, res) => {
             .limit(limitNum)
             .lean();
 
+        // TRANSFORM BLOG RESPONSE
+
+        const transformedBlogs = blogs.map((blog) => {
+
+            // CHECK CURRENT USER LIKED OR NOT
+            const likedByCurrentUser = blog.likes.some(
+                (id) => id.toString() === user?._id?.toString()
+            );
+
+            return {
+
+                // ALL EXISTING BLOG DATA
+                ...blog,
+
+                // TOTAL LIKE COUNT
+                totalLikes: blog.likes.length,
+
+                // USER LIKE STATUS
+                likedByCurrentUser,
+
+                // HIDE RAW LIKES ARRAY
+                likes: undefined
+            };
+        });
+
         const total = await Blog.countDocuments(finalFilter);
 
         return res.status(200).json({
             success: true,
             message: "Blogs fetched successfully",
-            data: blogs,
+            // CHANGED FROM blogs -> transformedBlogs
+            data: transformedBlogs,
+
             pagination: {
                 total,
                 page: pageNum,
@@ -1209,97 +1427,7 @@ const getAllBlogs = async (req, res) => {
         });
     }
 };
-// const getAllBlogs = async (req, res) => {
-//     try {
-//         const {
-//             page = 1,
-//             limit = 10,
-//             search,
-//             category,
-//             tag,
-//             sort = "latest"
-//         } = req.query;
 
-//         const user = req.user;
-
-//         const pageNum = parseInt(page);
-//         const limitNum = parseInt(limit);
-//         const skip = (pageNum - 1) * limitNum;
-
-//         // BASE FILTER
-//         let filter = {
-//             isDeleted: false,
-//             isBlocked: false
-//         };
-
-//         // VISIBILITY CONTROL
-//         if (user.role !== "admin") {
-//             filter.$or = [
-//                 { visibility: "public" },
-//                 { author: user._id }
-//             ];
-//         }
-
-//         // SEARCH (title + tags)
-//         if (search) {
-//             filter.$or = [
-//                 { title: { $regex: search, $options: "i" } },
-//                 { tags: { $regex: search, $options: "i" } }
-//             ];
-//         }
-
-//         // CATEGORY FILTER
-//         if (category) {
-//             filter.category = category;
-//         }
-
-//         // TAG FILTER
-//         if (tag) {
-//             filter.tags = { $in: [tag.toLowerCase()] };
-//         }
-
-//         // SORTING
-//         let sortOption = {};
-//         if (sort === "popular") {
-//             sortOption = { views: -1 };
-//         } else {
-//             sortOption = { createdAt: -1 };
-//         }
-
-//         // QUERY
-//         const blogs = await Blog.find(filter)
-//             .populate("author", "username")
-//             .populate("category", "name slug")
-//             .sort(sortOption)
-//             .skip(skip)
-//             .limit(limitNum);
-
-//         const total = await Blog.countDocuments(filter);
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "Blogs fetched successfully",
-//             data: blogs,
-//             pagination: {
-//                 total,
-//                 page: pageNum,
-//                 limit: limitNum,
-//                 totalPages: Math.ceil(total / limitNum)
-//             }
-//         });
-
-//     } catch (error) {
-//         console.error("Get All Blogs Error:", error);
-
-//         return res.status(500).json({
-//             success: false,
-//             message: "Error fetching blogs",
-//             data: null
-//         });
-//     }
-// };
-
-// user ke apne blogs dekhne ke liye 
 const getUserBlogs = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -1332,6 +1460,7 @@ const getUserBlogs = async (req, res) => {
 
         // SORT
         let sortOption = {};
+
         if (sort === "popular") {
             sortOption = { views: -1 };
         } else {
@@ -1343,14 +1472,43 @@ const getUserBlogs = async (req, res) => {
             .populate("category", "name slug")
             .sort(sortOption)
             .skip(skip)
-            .limit(limitNum);
+            .limit(limitNum)
+            .lean();
+
+
+        // =========================
+        // TRANSFORM BLOG RESPONSE
+        // =========================
+
+        const transformedBlogs = blogs.map((blog) => {
+
+            // CHECK CURRENT USER LIKED OR NOT
+            const likedByCurrentUser = blog.likes.some(
+                (id) => id.toString() === user?._id?.toString()
+            );
+
+            return {
+
+                // ALL EXISTING BLOG DATA
+                ...blog,
+
+                // TOTAL LIKE COUNT
+                totalLikes: blog.likes.length,
+
+                // USER LIKE STATUS
+                likedByCurrentUser
+            };
+        });
 
         const total = await Blog.countDocuments(filter);
 
         return res.status(200).json({
             success: true,
             message: "User blogs fetched successfully",
-            data: blogs,
+
+            // CHANGED FROM blogs -> transformedBlogs
+            data: transformedBlogs,
+
             pagination: {
                 total,
                 page: pageNum,
@@ -1369,6 +1527,206 @@ const getUserBlogs = async (req, res) => {
         });
     }
 };
+// const getAllBlogs = async (req, res) => {
+//     try {
+//         const {
+//             page = 1,
+//             limit = 10,
+//             search = "",
+//             category,
+//             tag,
+//             sort = "latest",
+//             type = "blog" // blog | user
+//         } = req.query;
+
+//         const user = req.user;
+
+//         const pageNum = parseInt(page);
+//         const limitNum = parseInt(limit);
+//         const skip = (pageNum - 1) * limitNum;
+
+//         // BASE FILTER (ALWAYS APPLIED)
+//         const baseFilter = {
+//             isDeleted: false,
+//             isBlocked: false
+//         };
+
+//         // VISIBILITY FILTER
+//         if (user?.role !== "admin") {
+//             baseFilter.$or = [
+//                 { visibility: "public" },
+//                 { author: user?._id }
+//             ];
+//         }
+
+//         // MAIN FILTER ARRAY ($and based)
+//         let andFilters = [baseFilter];
+
+//         // SEARCH LOGIC
+//         if (search) {
+//             if (type === "blog") {
+//                 andFilters.push({
+//                     $or: [
+//                         { title: { $regex: search, $options: "i" } },
+//                         { tags: { $in: [new RegExp(search, "i")] } }
+//                     ]
+//                 });
+//             }
+
+//             if (type === "user") {
+//                 const users = await User.find({
+//                     username: { $regex: search, $options: "i" }
+//                 }).select("_id");
+
+//                 const userIds = users.map(u => u._id);
+
+//                 andFilters.push({
+//                     author: { $in: userIds.length ? userIds : [null] }
+//                 });
+//             }
+//         }
+
+//         // CATEGORY FILTER (MULTIPLE)
+//         if (category) {
+//             //console.log("Category Query:", category);
+//             const categories = category
+//                 .split(",")
+//                 .map(id => id.trim())
+//                 .filter(id => mongoose.Types.ObjectId.isValid(id));
+
+//             if (categories.length > 0) {
+//                 andFilters.push({
+//                     category: {
+//                         $in: categories.map(id => new mongoose.Types.ObjectId(id))
+//                     }
+//                 });
+//             }
+//         }
+
+//         // TAG FILTER
+//         if (tag) {
+//             andFilters.push({
+//                 tags: { $in: [tag.toLowerCase()] }
+//             });
+//         }
+
+//         // FINAL FILTER
+//         const finalFilter = { $and: andFilters };
+
+//         // SORTING
+//         let sortOption = {};
+//         if (sort === "popular") {
+//             sortOption = { views: -1 };
+//         } else {
+//             sortOption = { createdAt: -1 };
+//         }
+
+//         // QUERY
+//         const blogs = await Blog.find(finalFilter)
+//             .populate("author", "username profilePic")
+//             .populate("category", "name slug")
+//             .sort(sortOption)
+//             .skip(skip)
+//             .limit(limitNum)
+//             .lean();
+
+//         const total = await Blog.countDocuments(finalFilter);
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Blogs fetched successfully",
+//             data: blogs,
+//             pagination: {
+//                 total,
+//                 page: pageNum,
+//                 limit: limitNum,
+//                 totalPages: Math.ceil(total / limitNum)
+//             }
+//         });
+
+//     } catch (error) {
+//         console.error("Get All Blogs Error:", error);
+
+//         return res.status(500).json({
+//             success: false,
+//             message: "Error fetching blogs",
+//             data: null
+//         });
+//     }
+// };
+
+
+// user ke apne blogs dekhne ke liye 
+
+// const getUserBlogs = async (req, res) => {
+//     try {
+//         const { userId } = req.params;
+//         const user = req.user;
+
+//         const {
+//             page = 1,
+//             limit = 10,
+//             sort = "latest"
+//         } = req.query;
+
+//         const pageNum = parseInt(page);
+//         const limitNum = parseInt(limit);
+//         const skip = (pageNum - 1) * limitNum;
+
+//         const isOwner = user._id.toString() === userId;
+//         const isAdmin = user.role === "admin";
+
+//         // BASE FILTER
+//         let filter = {
+//             author: userId,
+//             isDeleted: false
+//         };
+
+//         // ACCESS CONTROL
+//         if (!isOwner && !isAdmin) {
+//             filter.visibility = "public";
+//             filter.isBlocked = false;
+//         }
+
+//         // SORT
+//         let sortOption = {};
+//         if (sort === "popular") {
+//             sortOption = { views: -1 };
+//         } else {
+//             sortOption = { createdAt: -1 };
+//         }
+
+//         // QUERY
+//         const blogs = await Blog.find(filter)
+//             .populate("category", "name slug")
+//             .sort(sortOption)
+//             .skip(skip)
+//             .limit(limitNum);
+
+//         const total = await Blog.countDocuments(filter);
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "User blogs fetched successfully",
+//             data: blogs,
+//             pagination: {
+//                 total,
+//                 page: pageNum,
+//                 limit: limitNum,
+//                 totalPages: Math.ceil(total / limitNum)
+//             }
+//         });
+
+//     } catch (error) {
+//         console.error("Get User Blogs Error:", error);
+
+//         return res.status(500).json({
+//             success: false,
+//             message: "Error fetching user blogs",
+//             data: null
+//         });
+//     }
+// };
 
 // featured blogs latest 4.
 const getFeaturedBlogs = async (req, res) => {
@@ -1404,6 +1762,84 @@ const getFeaturedBlogs = async (req, res) => {
     }
 };
 
+// like api
+const toggleLike = async (req, res) => {
+    try {
+        const blogId = req.params.blogId;
+        const userId = req.user._id;
+
+        // Find Blog
+        const blog = await Blog.findById(blogId);
+
+        if (!blog) {
+            return res.status(404).json({
+                success: false,
+                message: "Blog not found",
+                data: null
+            });
+        }
+
+        // Deleted Blog
+        if (blog.isDeleted) {
+            return res.status(404).json({
+                success: false,
+                message: "Blog not found",
+                data: null
+            });
+        }
+
+        // Blocked Blog
+        if (blog.isBlocked) {
+            return res.status(403).json({
+                success: false,
+                message: "This blog is blocked",
+                data: null
+            });
+        }
+
+        // Check already liked or not
+        const alreadyLiked = blog.likes.includes(userId);
+
+        // Unlike
+        if (alreadyLiked) {
+            blog.likes.pull(userId);
+
+            await blog.save();
+
+            return res.status(200).json({
+                success: true,
+                message: "Blog unliked successfully",
+                data: {
+                    liked: false,
+                    totalLikes: blog.likes.length
+                }
+            });
+        }
+
+        // Like
+        blog.likes.push(userId);
+
+        await blog.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Blog liked successfully",
+            data: {
+                liked: true,
+                totalLikes: blog.likes.length
+            }
+        });
+
+    } catch (error) {
+        console.error("Toggle Like Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Error toggling like",
+            data: null
+        });
+    }
+};
 
 module.exports = {
     createCategory,
@@ -1422,7 +1858,8 @@ module.exports = {
     getAllBlogs,
     getUserBlogs,
     getFeaturedBlogs,
-    getBlogBySlug
+    getBlogBySlug,
+    toggleLike
 }
 
 

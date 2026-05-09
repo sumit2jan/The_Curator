@@ -30,7 +30,7 @@ const UserSchema = new mongoose.Schema(
       maxlength: 128,
       select: false,
       required: function () {
-        return this.authProvider === "local";f
+        return this.authProvider === "local"; 
       }
     },
 
@@ -72,11 +72,21 @@ const UserSchema = new mongoose.Schema(
         },
       },
     ],
-
+    followers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    following: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     followersCount: { type: Number, default: 0 },
     followingCount: { type: Number, default: 0 },
-    subscribersCount: { type: Number, default: 0 },
-    subscribedToCount: { type: Number, default: 0 },
+
   },
   { timestamps: true }
 );

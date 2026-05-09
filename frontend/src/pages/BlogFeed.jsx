@@ -63,7 +63,34 @@ const BlogFeed = () => {
             setCatLoading(false);
         }
     };
+    // =========================
+    // TOGGLE LIKE
+    // =========================
+    const handleLikeToggle = async (blogId) => {
+        try {
 
+            // API CALL
+            const res = await API.post(`/blog/${blogId}/like`);
+
+            const { liked, totalLikes } = res.data.data;
+
+            // OPTIMISTIC UI UPDATE
+            setBlogs((prevBlogs) =>
+                prevBlogs.map((blog) =>
+                    blog._id === blogId
+                        ? {
+                            ...blog,
+                            likedByCurrentUser: liked,
+                            totalLikes
+                        }
+                        : blog
+                )
+            );
+
+        } catch (error) {
+            console.error("Like toggle error", error);
+        }
+    };
     // INITIAL LOAD
     useEffect(() => {
         fetchCategories();
@@ -117,7 +144,11 @@ const BlogFeed = () => {
                     <>
                         <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
                             {blogs.map((blog) => (
-                                <BlogCard key={blog._id} blog={blog} />
+                                <BlogCard
+                                    key={blog._id}
+                                    blog={blog}
+                                    onLikeToggle={handleLikeToggle}
+                                />
                             ))}
                         </div>
 

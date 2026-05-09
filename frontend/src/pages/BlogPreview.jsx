@@ -121,7 +121,7 @@ const BlogPreview = () => {
         </div>
 
         {/* 🔥 SETTINGS (FIXED ABOVE NAVBAR) */}
-        <div className="absolute top-24 right-6 z-20">
+        <div className="absolute top-64 right-18 z-20">
           <button
             onClick={() => setShowMenu(!showMenu)}
             className="bg-black/60 hover:bg-black p-2 rounded-full backdrop-blur"

@@ -390,7 +390,7 @@ const updateUser = async (req, res) => {
         if (bio !== undefined) detailUpdate.bio = bio;
         if (dob !== undefined) detailUpdate.dob = dob;
 
-        
+
 
         // check if the fields are upadted or not 
         if (
@@ -577,14 +577,16 @@ const toggleVerify = async (req, res) => {
 //profile 
 const getUserProfile = async (req, res) => {
     try {
+
         const paramId = req.params.id;
         const loggedInUser = req.user;
         const loggedInId = loggedInUser._id.toString();
 
         let targetUserId = paramId || loggedInId;
 
-        // STEP 1: Get target user's visibility
-        const targetUser = await User.findById(targetUserId).select("profileVisibility");
+        // STEP 1: GET TARGET USER VISIBILITY
+        const targetUser = await User.findById(targetUserId)
+            .select("profileVisibility followers");
 
         if (!targetUser) {
             return res.status(404).json({
@@ -594,7 +596,7 @@ const getUserProfile = async (req, res) => {
             });
         }
 
-        // STEP 2: Authorization check
+        // STEP 2: AUTHORIZATION CHECK
         const isOwner = targetUserId === loggedInId;
         const isAdmin = loggedInUser.role === "admin";
         const isPublic = targetUser.profileVisibility === "public";
@@ -607,13 +609,19 @@ const getUserProfile = async (req, res) => {
             });
         }
 
-        // STEP 3: Aggregation
+        // STEP 3: CHECK FOLLOW STATUS
+        const isFollowing = targetUser.followers.some(
+            (id) => id.toString() === loggedInId
+        );
+
+        // STEP 4: AGGREGATION
         const userId = new mongoose.Types.ObjectId(targetUserId);
 
         const result = await User.aggregate([
             {
                 $match: { _id: userId }
             },
+
             {
                 $lookup: {
                     from: "userdetails",
@@ -622,20 +630,26 @@ const getUserProfile = async (req, res) => {
                     as: "details"
                 }
             },
+
             {
                 $unwind: {
                     path: "$details",
                     preserveNullAndEmptyArrays: true
                 }
             },
+
             {
                 $project: {
                     password: 0,
                     __v: 0,
+                    refreshTokens: 0,
+                    googleId: 0,
+
                     "details.__v": 0,
                     "details.userId": 0
                 }
             },
+
             {
                 $addFields: {
                     firstName: "$details.firstName",
@@ -649,6 +663,7 @@ const getUserProfile = async (req, res) => {
                     detailId: "$details._id"
                 }
             },
+
             {
                 $project: {
                     details: 0
@@ -664,6 +679,12 @@ const getUserProfile = async (req, res) => {
             });
         }
 
+        // ADD EXTRA FRONTEND FIELDS
+        result[0].isFollowing = isFollowing;
+
+        result[0].isOwner = isOwner;
+
+
         return res.status(200).json({
             success: true,
             message: "Profile fetched successfully",
@@ -671,6 +692,7 @@ const getUserProfile = async (req, res) => {
         });
 
     } catch (error) {
+
         console.log("Get Profile Error:", error);
 
         return res.status(500).json({
@@ -682,28 +704,37 @@ const getUserProfile = async (req, res) => {
 };
 // const getUserProfile = async (req, res) => {
 //     try {
-//         const paramId = req.params.id; // optional
-//         const loggedInId = req.user._id.toString();
+//         const paramId = req.params.id;
+//         const loggedInUser = req.user;
+//         const loggedInId = loggedInUser._id.toString();
 
-//         // Decide which ID to use
-//         let targetUserId;
+//         let targetUserId = paramId || loggedInId;
 
-//         if (paramId) {
-//             // Authorization check
-//             if (req.user.role !== "admin" && paramId !== loggedInId && req.user.profileVisibility == private) {
-//                 return res.status(403).json({
-//                     success: false,
-//                     message: "Unauthorized",
-//                     data: null
-//                 });
-//             }
+//         // STEP 1: Get target user's visibility
+//         const targetUser = await User.findById(targetUserId).select("profileVisibility");
 
-//             targetUserId = paramId;
-//         } else {
-//             // If no param → own profile
-//             targetUserId = loggedInId;
+//         if (!targetUser) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "User not found",
+//                 data: null
+//             });
 //         }
 
+//         // STEP 2: Authorization check
+//         const isOwner = targetUserId === loggedInId;
+//         const isAdmin = loggedInUser.role === "admin";
+//         const isPublic = targetUser.profileVisibility === "public";
+
+//         if (!isPublic && !isOwner && !isAdmin) {
+//             return res.status(403).json({
+//                 success: false,
+//                 message: "This profile is private",
+//                 data: null
+//             });
+//         }
+
+//         // STEP 3: Aggregation
 //         const userId = new mongoose.Types.ObjectId(targetUserId);
 
 //         const result = await User.aggregate([
@@ -919,6 +950,125 @@ const uploadCoverPic = async (req, res) => { // upload cover ke liye
     }
 };
 
+// follow and unfollow
+const toggleFollow = async (req, res) => {
+    try {
+
+        const targetUserId = req.params.userId;
+        const loggedInUserId = req.user._id;
+
+        // VALIDATE USER ID
+        if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user id",
+                data: null
+            });
+        }
+
+        // PREVENT SELF FOLLOW
+
+        if (targetUserId === loggedInUserId.toString()) {
+            return res.status(400).json({
+                success: false,
+                message: "You cannot follow yourself",
+                data: null
+            });
+        }
+
+        // FIND USERS
+
+        const targetUser = await User.findById(targetUserId);
+
+        const loggedInUser = await User.findById(loggedInUserId);
+
+        if (!targetUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+                data: null
+            });
+        }
+
+        // CHECK ALREADY FOLLOWING
+
+        const alreadyFollowing = loggedInUser.following.some(
+            (id) => id.toString() === targetUserId
+        );
+
+        // UNFOLLOW USER
+
+        if (alreadyFollowing) {
+
+            // REMOVE FROM FOLLOWING
+            loggedInUser.following.pull(targetUserId);
+
+            // REMOVE FROM FOLLOWERS
+            targetUser.followers.pull(loggedInUserId);
+
+            // DECREMENT COUNTS
+            loggedInUser.followingCount -= 1;
+            targetUser.followersCount -= 1;
+
+            // SAVE BOTH USERS
+            await loggedInUser.save();
+            await targetUser.save();
+
+            return res.status(200).json({
+                success: true,
+                message: "User unfollowed successfully",
+                data: {
+                    following: false,
+                    followersCount: targetUser.followersCount
+                }
+            });
+        }
+
+        // FOLLOW USER
+
+        // ADD TO FOLLOWING
+        loggedInUser.following.push(targetUserId);
+
+        // ADD TO FOLLOWERS
+        targetUser.followers.push(loggedInUserId);
+
+        // INCREMENT COUNTS
+        loggedInUser.followingCount += 1;
+        targetUser.followersCount += 1;
+
+        // SAVE BOTH USERS
+        await loggedInUser.save();
+        await targetUser.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "User followed successfully",
+            data: {
+                following: true,
+                followersCount: targetUser.followersCount
+            }
+        });
+
+    } catch (error) {
+
+        console.log("Toggle Follow Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+            data: null
+        });
+    }
+};
 
 
-module.exports = { getAllUsers, updateUser, deleteUser, toggleVerify, getUserProfile, uploadProfilePic, uploadCoverPic };
+module.exports = {
+    getAllUsers,
+    updateUser,
+    deleteUser,
+    toggleVerify,
+    getUserProfile,
+    uploadProfilePic,
+    uploadCoverPic,
+    toggleFollow
+};
